@@ -1,0 +1,46 @@
+{
+  "name": "loadlab",
+  "version": "0.1.0",
+  "description": "Local-first load testing for developers",
+  "main": "out/main/index.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "dist": "electron-vite build && electron-builder",
+    "selfcheck": "node scripts/selfcheck.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "autocannon": "^7.15.0"
+  },
+  "devDependencies": {
+    "@types/autocannon": "^7.12.7",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.0",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.13.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
+  },
+  "build": {
+    "appId": "dev.loadlab.app",
+    "productName": "LoadLab",
+    "files": [
+      "out/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "release"
+    }
+  }
+}
