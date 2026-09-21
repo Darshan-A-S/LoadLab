@@ -161,9 +161,11 @@ export default function Builder({ draft, onChange, error, onStarted, onError }: 
               value={k}
               placeholder="Header"
               onChange={(e) => {
+                const newKey = e.target.value.trim()
+                if (!newKey) return
                 const next = { ...draft.target.headers }
                 delete next[k]
-                next[e.target.value] = v
+                next[newKey] = v
                 setTarget({ headers: next })
               }}
             />
@@ -186,6 +188,17 @@ export default function Builder({ draft, onChange, error, onStarted, onError }: 
             </button>
           </div>
         ))}
+        <button
+          onClick={() => setTarget({ headers: { ...draft.target.headers, Cookie: '' } })}
+          disabled={headers.some(([k]) => k.toLowerCase() === 'cookie')}
+        >
+          + Add Cookie
+        </button>
+        {headers.some(([k]) => k.toLowerCase() === 'cookie') && (
+          <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+            Format: <code>name=value; name2=value2</code>
+          </p>
+        )}
         <button
           onClick={() => setTarget({ headers: { ...draft.target.headers, '': '' } })}
           disabled={headers.some(([k]) => k === '')}

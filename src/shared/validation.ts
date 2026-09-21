@@ -31,6 +31,10 @@ export function validate(test: TestDefinition): ValidationResult {
   if (!test.name?.trim()) errors.push('Test name is required')
   if (!validateUrl(test.target.url)) errors.push('Target must be a valid http(s) URL')
   if (!METHODS.includes(test.target.method)) errors.push('Unsupported HTTP method')
+  const h = test.target.headers ?? {}
+  for (const key of Object.keys(h)) {
+    if (!key.trim()) errors.push('Header name cannot be empty')
+  }
   const l = test.load
   if (!Number.isInteger(l.connections) || l.connections < 1) errors.push('Connections must be >= 1')
   if (!Number.isInteger(l.durationSeconds) || l.durationSeconds < 1) errors.push('Duration must be >= 1 second')
