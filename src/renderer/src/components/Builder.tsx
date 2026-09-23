@@ -4,15 +4,24 @@ import type { TestDefinition, HttpMethod } from '@shared/types'
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
+const METHOD_COLORS: Record<HttpMethod, string> = {
+  GET: '#4fbb87',
+  POST: '#f2994a',
+  PUT: '#2f80ed',
+  PATCH: '#9b51e0',
+  DELETE: '#eb5757'
+}
+
 interface Props {
   draft: TestDefinition
   onChange: (d: TestDefinition) => void
   error: string | null
   onStarted: (runId: number) => void
   onError: (msg: string) => void
+  onSave: () => void
 }
 
-export default function Builder({ draft, onChange, error, onStarted, onError }: Props): JSX.Element {
+export default function Builder({ draft, onChange, error, onStarted, onError, onSave }: Props): JSX.Element {
   const [confirm, setConfirm] = useState<{ warning: string } | null>(null)
   const [starting, setStarting] = useState(false)
 
@@ -58,17 +67,26 @@ export default function Builder({ draft, onChange, error, onStarted, onError }: 
     }
   }
 
-  function saveScenario(): void {
-    const name = draft.name.trim() || 'Untitled'
-    void window.loadlab.scenarios.save({ ...draft, name }).then(() => void window.loadlab.scenarios.list())
-  }
-
   return (
     <div>
       <div className="headerbar">
         <h1 style={{ margin: 0 }}>New Test</h1>
-        <button onClick={saveScenario} disabled={!draft.name.trim()}>
+        <button onClick={onSave} disabled={!draft.name.trim()}>
           Save Test
+        </button>
+      </div>
+
+      <div className="reqbar">
+        <MethodSelect value={draft.target.method} onChange={(m) => setTarget({ method: m })} />
+        <input
+          className="url"
+          value={draft.target.url}
+          onChange={(e) => setTarget({ url: e.target.value })}
+          placeholder="http://localhost:3000/api/users"
+          spellCheck={false}
+        />
+        <button className="primary" onClick={() => void start()} disabled={!v.ok || starting}>
+          {starting ? 'Starting…' : 'Start'}
         </button>
       </div>
 
@@ -82,30 +100,6 @@ export default function Builder({ draft, onChange, error, onStarted, onError }: 
             placeholder="e.g. Local Users API"
           />
         </label>
-        <div className="row" style={{ marginTop: 12 }}>
-          <label className="field">
-            URL
-            <input
-              value={draft.target.url}
-              onChange={(e) => setTarget({ url: e.target.value })}
-              placeholder="http://localhost:3000/api/users"
-              spellCheck={false}
-            />
-          </label>
-          <label className="field" style={{ maxWidth: 140 }}>
-            Method
-            <select
-              value={draft.target.method}
-              onChange={(e) => setTarget({ method: e.target.value as HttpMethod })}
-            >
-              {METHODS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
       </div>
 
       <div className="card">
@@ -238,10 +232,6 @@ export default function Builder({ draft, onChange, error, onStarted, onError }: 
         </p>
       )}
 
-      <button className="primary grow" style={{ width: '100%' }} onClick={() => void start()} disabled={!v.ok || starting}>
-        {starting ? 'Starting…' : 'Start Test'}
-      </button>
-
       {confirm && (
         <div className="modal-backdrop">
           <div className="modal">
@@ -254,6 +244,45 @@ export default function Builder({ draft, onChange, error, onStarted, onError }: 
             </div>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+function MethodSelect({ value, onChange }: { value: HttpMethod; onChange: (m: HttpMethod) => void }): JSX.Element {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="msel" style={{ position: 'relative' }}>
+      <button
+        type="button"
+        className="msel-btn"
+        style={{ color: METHOD_COLORS[value] }}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {value}
+        <svg width="9" height="9" viewBox="0 0 9 9">
+          <path d="M1 3l3.5 3L8 3" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="msel-backdrop" onClick={() => setOpen(false)} />
+          <div className="msel-menu">
+            {METHODS.map((m) => (
+              <button
+                key={m}
+                className={m === value ? 'active' : ''}
+                style={{ color: METHOD_COLORS[m] }}
+                onClick={() => {
+                  onChange(m)
+                  setOpen(false)
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

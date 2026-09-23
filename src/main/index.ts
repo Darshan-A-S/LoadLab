@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { initDb, insertScenario, listScenarios, deleteScenario, listRuns } from './db'
+import { initDb, insertScenario, listScenarios, deleteScenario, listRuns, listCollections, createCollection, renameCollection, duplicateCollection, deleteCollection } from './db'
 import { startTest, stopTest, activeRunIds } from './runner'
 import { renderJSON, renderCSV } from './export'
 import type { TestDefinition } from '../shared/types'
@@ -58,11 +58,24 @@ app.whenReady().then(() => {
   ipcMain.handle('win:is-maximized', (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false)
 
   ipcMain.handle('scenarios:list', () => listScenarios())
-  ipcMain.handle('scenarios:save', (_e, test: TestDefinition) => ({
-    id: insertScenario(test)
+  ipcMain.handle('scenarios:save', (_e, test: TestDefinition, collectionId: number | null) => ({
+    id: insertScenario(test, collectionId)
   }))
   ipcMain.handle('scenarios:delete', (_e, id: number) => {
     deleteScenario(id)
+  })
+  ipcMain.handle('collections:list', () => listCollections())
+  ipcMain.handle('collections:create', (_e, name: string) => ({
+    id: createCollection(name)
+  }))
+  ipcMain.handle('collections:rename', (_e, id: number, name: string) => {
+    renameCollection(id, name)
+  })
+  ipcMain.handle('collections:duplicate', (_e, id: number) => ({
+    id: duplicateCollection(id)
+  }))
+  ipcMain.handle('collections:delete', (_e, id: number) => {
+    deleteCollection(id)
   })
   ipcMain.handle('runs:list', () => listRuns() as HistoryEntry[])
   ipcMain.handle('runs:start', (_e, test: TestDefinition) => startTest(test, undefined, push))

@@ -1,4 +1,4 @@
-import type { TestDefinition, Scenario, HistoryEntry, SampleEvent, ResultEvent } from '../shared/types'
+import type { TestDefinition, Scenario, HistoryEntry, Collection, SampleEvent, ResultEvent } from '../shared/types'
 
 export type RunEvent =
   | { type: 'sample'; data: SampleEvent }
@@ -9,7 +9,14 @@ declare global {
     loadlab: {
       scenarios: {
         list: () => Promise<Scenario[]>
-        save: (test: TestDefinition) => Promise<{ id: number }>
+        save: (test: TestDefinition, collectionId: number | null) => Promise<{ id: number }>
+        delete: (id: number) => Promise<void>
+      }
+      collections: {
+        list: () => Promise<Collection[]>
+        create: (name: string) => Promise<{ id: number }>
+        rename: (id: number, name: string) => Promise<void>
+        duplicate: (id: number) => Promise<{ id: number }>
         delete: (id: number) => Promise<void>
       }
       runs: {

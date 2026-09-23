@@ -3,6 +3,7 @@ import type {
   TestDefinition,
   Scenario,
   HistoryEntry,
+  Collection,
   SampleEvent,
   ResultEvent
 } from '../shared/types'
@@ -12,8 +13,16 @@ export type RunEvent = { type: 'sample'; data: SampleEvent } | { type: 'result';
 const loadlab = {
   scenarios: {
     list: (): Promise<Scenario[]> => ipcRenderer.invoke('scenarios:list'),
-    save: (test: TestDefinition): Promise<{ id: number }> => ipcRenderer.invoke('scenarios:save', test),
+    save: (test: TestDefinition, collectionId: number | null): Promise<{ id: number }> =>
+      ipcRenderer.invoke('scenarios:save', test, collectionId),
     delete: (id: number): Promise<void> => ipcRenderer.invoke('scenarios:delete', id)
+  },
+  collections: {
+    list: (): Promise<Collection[]> => ipcRenderer.invoke('collections:list'),
+    create: (name: string): Promise<{ id: number }> => ipcRenderer.invoke('collections:create', name),
+    rename: (id: number, name: string): Promise<void> => ipcRenderer.invoke('collections:rename', id, name),
+    duplicate: (id: number): Promise<{ id: number }> => ipcRenderer.invoke('collections:duplicate', id),
+    delete: (id: number): Promise<void> => ipcRenderer.invoke('collections:delete', id)
   },
   runs: {
     list: (): Promise<HistoryEntry[]> => ipcRenderer.invoke('runs:list'),

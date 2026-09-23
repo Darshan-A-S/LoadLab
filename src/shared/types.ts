@@ -65,11 +65,18 @@ export interface TestResult {
   timeSeries: TimeSeriesSample[]
 }
 
+export interface Collection {
+  id: number
+  name: string
+  createdAt: string
+}
+
 export interface Scenario {
   id: number
   name: string
   config: TestDefinition
   createdAt: string
+  collectionId: number | null
 }
 
 export interface HistoryEntry {
