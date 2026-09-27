@@ -1,9 +1,10 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
-import { writeFile } from 'node:fs/promises'
+import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { initDb, insertScenario, listScenarios, deleteScenario, listRuns, listCollections, createCollection, renameCollection, duplicateCollection, deleteCollection } from './db'
+import { initDb, insertScenario, listScenarios, deleteScenario, listRuns, listCollections, createCollection, renameCollection, duplicateCollection, deleteCollection, importCollection } from './db'
 import { startTest, stopTest, activeRunIds } from './runner'
 import { renderJSON, renderCSV } from './export'
+import { validate } from '../shared/validation'
 import type { TestDefinition } from '../shared/types'
 import type { HistoryEntry } from '../shared/types'
 
@@ -76,6 +77,52 @@ app.whenReady().then(() => {
   }))
   ipcMain.handle('collections:delete', (_e, id: number) => {
     deleteCollection(id)
+  })
+  ipcMain.handle('collections:export', async (e, id: number) => {
+    const coll = listCollections().find((c) => c.id === id)
+    if (!coll) throw new Error('Collection not found')
+    const scenarios = listScenarios()
+      .filter((s) => s.collectionId === id)
+      .map((s) => s.config)
+    const win = BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getAllWindows()[0]
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      defaultPath: `${coll.name.replace(/[\\/:*?"<>|]/g, '_')}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (canceled || !filePath) return null
+    await writeFile(filePath, JSON.stringify({ name: coll.name, scenarios }, null, 2), 'utf8')
+    return filePath
+  })
+  ipcMain.handle('collections:import', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getAllWindows()[0]
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (canceled || !filePaths[0]) return null
+    let data: { name?: unknown; scenarios?: unknown }
+    try {
+      data = JSON.parse(await readFile(filePaths[0], 'utf8')) as { name?: unknown; scenarios?: unknown }
+    } catch {
+      throw new Error('File is not valid JSON')
+    }
+    if (!data || typeof data.name !== 'string' || !Array.isArray(data.scenarios)) {
+      throw new Error('File is not a LoadLab collection export')
+    }
+    const name = data.name.trim() || 'Imported Collection'
+    const skipped: string[] = []
+    const configs: TestDefinition[] = []
+    for (const entry of data.scenarios) {
+      const t = entry as TestDefinition
+      const res = validate(t)
+      if (res.ok) configs.push(t)
+      else skipped.push(typeof t?.name === 'string' ? t.name : '(unnamed)')
+    }
+    if (configs.length === 0 && data.scenarios.length > 0) {
+      throw new Error(`No importable scenarios: ${skipped.join(', ')}`)
+    }
+    const id = importCollection(name, configs)
+    return { id, name, imported: configs.length, skipped }
   })
   ipcMain.handle('runs:list', () => listRuns() as HistoryEntry[])
   ipcMain.handle('runs:start', (_e, test: TestDefinition) => startTest(test, undefined, push))

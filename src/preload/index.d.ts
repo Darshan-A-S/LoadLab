@@ -18,6 +18,8 @@ declare global {
         rename: (id: number, name: string) => Promise<void>
         duplicate: (id: number) => Promise<{ id: number }>
         delete: (id: number) => Promise<void>
+        export: (id: number) => Promise<string | null>
+        import: () => Promise<{ id: number; name: string; imported: number; skipped: string[] } | null>
       }
       runs: {
         list: () => Promise<HistoryEntry[]>

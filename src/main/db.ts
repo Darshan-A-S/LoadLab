@@ -44,11 +44,7 @@ function migrate(): void {
   if (!cols.some((c) => c.name === 'collection_id')) {
     db.exec('ALTER TABLE scenarios ADD COLUMN collection_id INTEGER')
   }
-  const any = db.prepare('SELECT id FROM collections LIMIT 1').get()
-  if (!any) {
-    const id = createCollection('My Collection')
-    db.prepare('UPDATE scenarios SET collection_id = ? WHERE collection_id IS NULL').run(id)
-  }
+  db.prepare('UPDATE scenarios SET collection_id = ? WHERE collection_id IS NULL').run(defaultCollectionId())
 }
 
 function parseRow(row: Record<string, unknown>): HistoryEntry {
@@ -64,11 +60,17 @@ function parseRow(row: Record<string, unknown>): HistoryEntry {
   }
 }
 
+function defaultCollectionId(): number {
+  const row = db.prepare('SELECT id FROM collections ORDER BY id LIMIT 1').get() as { id: number } | undefined
+  if (row) return row.id
+  return createCollection('My Collection')
+}
+
 export function insertScenario(test: TestDefinition, collectionId: number | null): number {
   const now = new Date().toISOString()
   const res = db
     .prepare('INSERT INTO scenarios (name, config, created_at, collection_id) VALUES (?, ?, ?, ?)')
-    .run(test.name, JSON.stringify(test), now, collectionId)
+    .run(test.name, JSON.stringify(test), now, collectionId ?? defaultCollectionId())
   return Number(res.lastInsertRowid)
 }
 
@@ -104,8 +106,14 @@ export function duplicateCollection(id: number): number {
 }
 
 export function deleteCollection(id: number): void {
-  db.prepare('UPDATE scenarios SET collection_id = NULL WHERE collection_id = ?').run(id)
   db.prepare('DELETE FROM collections WHERE id = ?').run(id)
+  db.prepare('UPDATE scenarios SET collection_id = ? WHERE collection_id = ?').run(defaultCollectionId(), id)
+}
+
+export function importCollection(name: string, configs: TestDefinition[]): number {
+  const id = createCollection(name)
+  for (const cfg of configs) insertScenario(cfg, id)
+  return id
 }
 
 export function listScenarios(): Scenario[] {

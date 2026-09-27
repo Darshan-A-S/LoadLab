@@ -1,4 +1,5 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+export type EngineType = 'autocannon' | 'oho' | 'k6'
 
 export interface TestDefinition {
   name: string

@@ -34,6 +34,24 @@ body {
   overflow: hidden;
 }
 
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
 button {
   font: inherit;
   cursor: pointer;
@@ -276,14 +294,22 @@ label.field {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   padding: 8px;
   gap: 4px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.collection input {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .slide-wrapper {
   flex: none;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .resizer {
@@ -399,6 +425,9 @@ label.field {
 
 .collection-section {
   margin-top: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .collection-collapse {

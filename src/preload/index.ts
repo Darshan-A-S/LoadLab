@@ -22,7 +22,10 @@ const loadlab = {
     create: (name: string): Promise<{ id: number }> => ipcRenderer.invoke('collections:create', name),
     rename: (id: number, name: string): Promise<void> => ipcRenderer.invoke('collections:rename', id, name),
     duplicate: (id: number): Promise<{ id: number }> => ipcRenderer.invoke('collections:duplicate', id),
-    delete: (id: number): Promise<void> => ipcRenderer.invoke('collections:delete', id)
+    delete: (id: number): Promise<void> => ipcRenderer.invoke('collections:delete', id),
+    export: (id: number): Promise<string | null> => ipcRenderer.invoke('collections:export', id),
+    import: (): Promise<{ id: number; name: string; imported: number; skipped: string[] } | null> =>
+      ipcRenderer.invoke('collections:import')
   },
   runs: {
     list: (): Promise<HistoryEntry[]> => ipcRenderer.invoke('runs:list'),

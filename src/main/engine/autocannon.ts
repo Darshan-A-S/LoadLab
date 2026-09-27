@@ -64,7 +64,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     duration: config.load.durationSeconds,
     pipelining: config.load.pipelining
   }
-  if (config.load.rate && config.load.rate > 0) opts.rate = config.load.rate
+  if (config.load.rate && config.load.rate > 0) opts.overallRate = config.load.rate
 
   const startedAt = Date.now()
   const state: RunState = {
@@ -136,12 +136,13 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     state.totalErrors++
   })
 
-  instance.on('tick', ({ counter, bytes }: { counter: number; bytes: number }) => {
-    state.totalRequests += counter ?? 0
+  instance.on('tick', (data?: { counter: number; bytes: number }) => {
+    const { counter = 0, bytes = 0 } = data ?? {}
+    state.totalRequests += counter
     const now = Date.now()
     const dt = (now - state.lastTickAt) / 1000
     state.lastTickAt = now
-    const sample = sampleFor(state, startedAt, dt > 0 ? Math.round((counter ?? 0) / dt) : counter ?? 0, bytes ?? 0)
+    const sample = sampleFor(state, startedAt, dt > 0 ? Math.round(counter / dt) : counter, bytes)
     state.samples.push(sample)
     cb.onSample(sample)
   })

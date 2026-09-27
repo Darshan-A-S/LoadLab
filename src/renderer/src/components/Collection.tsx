@@ -15,6 +15,8 @@ interface Props {
   onRenameCollection: (c: Coll) => void
   onDuplicateCollection: (id: number) => void
   onDeleteCollection: (id: number) => void
+  onExportCollection: (id: number) => void
+  onImportCollection: () => void
 }
 
 type Panel = 'saved' | 'history'
@@ -30,7 +32,9 @@ export default function Collection({
   onNewCollection,
   onRenameCollection,
   onDuplicateCollection,
-  onDeleteCollection
+  onDeleteCollection,
+  onExportCollection,
+  onImportCollection
 }: Props): JSX.Element {
   const [panel, setPanel] = useState<Panel>('saved')
   const [query, setQuery] = useState('')
@@ -60,7 +64,6 @@ export default function Collection({
       const bDef = b.collection.name.toLowerCase() === 'my collection' ? 0 : 1
       return aDef - bDef || a.collection.name.localeCompare(b.collection.name)
     })
-  const uncoll = saved.filter((s) => s.collectionId == null || !collections.some((c) => c.id === s.collectionId))
 
   return (
     <aside className="collection">
@@ -77,7 +80,7 @@ export default function Collection({
             placeholder=""
           />
         </div>
-        <button className="collection-icon-btn" title="Import">
+        <button className="collection-icon-btn" title="Import collection" onClick={onImportCollection}>
           <FolderDown size={14} />
         </button>
       </div>
@@ -134,6 +137,9 @@ export default function Collection({
                           <button onClick={() => { setMenu(null); onDuplicateCollection(collection.id) }}>
                             Duplicate
                           </button>
+                          <button onClick={() => { setMenu(null); onExportCollection(collection.id) }}>
+                            Export
+                          </button>
                           <button
                             onClick={() => { setMenu(null); onDeleteCollection(collection.id) }}
                             className="danger"
@@ -151,20 +157,6 @@ export default function Collection({
                     ))}
                 </div>
               ))}
-              {uncoll.length > 0 && (
-                <div className="collection-group">
-                  <div className="collection-head">
-                    <button className="collection-collapse" onClick={() => toggleColl(-1)}>
-                      <ChevronRight size={12} className={`collection-chev ${openColls[-1] ?? true ? 'open' : ''}`} />
-                      <span className="collection-head-name">Unassigned</span>
-                    </button>
-                  </div>
-                  {(openColls[-1] ?? true) &&
-                    uncoll.map((s) => (
-                      <ScenarioItem key={s.id} s={s} onOpen={onOpenScenario} onDelete={onDeleteScenario} />
-                    ))}
-                </div>
-              )}
             </div>
           )}
         </div>

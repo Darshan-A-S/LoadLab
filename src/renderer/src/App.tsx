@@ -305,6 +305,26 @@ export default function App(): JSX.Element {
     void window.loadlab.collections.duplicate(id).then(() => refreshCollections())
   }
 
+  function exportCollection(id: number): void {
+    void window.loadlab.collections.export(id).catch((err) =>
+      alert(err instanceof Error ? err.message : String(err))
+    )
+  }
+
+  function importCollection(): void {
+    void window.loadlab.collections
+      .import()
+      .then((res) => {
+        if (!res) return
+        refreshCollections()
+        refreshScenarios()
+        if (res.skipped.length > 0) {
+          alert(`Imported ${res.imported} scenarios into "${res.name}".\nSkipped: ${res.skipped.join(', ')}`)
+        }
+      })
+      .catch((err) => alert(err instanceof Error ? err.message : String(err)))
+  }
+
   function deleteCollection(id: number): void {
     void window.loadlab.collections.delete(id).then(refreshCollections)
   }
@@ -366,6 +386,8 @@ export default function App(): JSX.Element {
             onRenameCollection={renameCollection}
             onDuplicateCollection={duplicateCollection}
             onDeleteCollection={deleteCollection}
+            onExportCollection={exportCollection}
+            onImportCollection={importCollection}
           />
         </div>
         <div className="resizer" onMouseDown={onResizeStart} />
