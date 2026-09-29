@@ -458,7 +458,9 @@ export default function App(): JSX.Element {
               : 'Ready'}
         </span>
         <span className="grow" />
-        <span className="status-right">Autocannon</span>
+        <span className="status-right" style={{ textTransform: 'capitalize' }}>
+          {activeTab?.kind === 'editor' ? activeTab.draft.engine : 'LoadLab'}
+        </span>
       </div>
 
       {closeProbe != null && (

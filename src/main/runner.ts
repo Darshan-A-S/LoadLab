@@ -1,17 +1,47 @@
 import * as autocannon from './engine/autocannon'
+import * as loadtest from './engine/loadtest'
+import * as artillery from './engine/artillery'
 import { insertRun, updateRunDone, updateRunStatus } from './db'
 import { validate } from '../shared/validation'
 import type {
   TestDefinition,
   TimeSeriesSample,
   ResultEvent,
-  TestResult
+  TestResult,
+  EngineType
 } from '../shared/types'
 
 export type RunnerPush = (ev: { type: 'sample' | 'result'; data: unknown }) => void
 
+export interface EngineAdapter {
+  validate(config: TestDefinition): string[]
+  start(
+    config: TestDefinition,
+    runId: number,
+    cb: {
+      onSample: (sample: TimeSeriesSample) => void
+      onDone: (err: Error | null, result: TestResult) => void
+    }
+  ): void
+  stop(runId: number): void
+  isRunning?(runId: number): boolean
+}
+
+const ENGINES: Record<EngineType, EngineAdapter> = {
+  autocannon,
+  loadtest,
+  artillery
+}
+
+function getEngine(type: EngineType): EngineAdapter {
+  const engine = ENGINES[type]
+  if (!engine) throw new Error(`Unsupported engine: "${type}"`)
+  return engine
+}
+
 const active = new Set<number>()
 const stopped = new Set<number>()
+const runEngines = new Map<number, EngineType>()
 
 export function startTest(
   def: TestDefinition,
@@ -20,23 +50,29 @@ export function startTest(
 ): number {
   const verr = validate(def)
   if (!verr.ok) throw new Error(verr.errors.join('; '))
-  const engineErrors = autocannon.validate(def)
+
+  const engineType = def.engine || 'autocannon'
+  const engine = getEngine(engineType)
+  const engineErrors = engine.validate(def)
   if (engineErrors.length) throw new Error(engineErrors.join('; '))
 
   const runId = insertRun({
     scenarioId,
     name: def.name,
     target: def.target.url,
-    engine: def.engine,
+    engine: engineType,
     status: 'starting',
     startedAt: new Date().toISOString()
   })
 
-  autocannon.start(def, runId, {
+  runEngines.set(runId, engineType)
+
+  engine.start(def, runId, {
     onSample: (sample: TimeSeriesSample) =>
       push({ type: 'sample', data: { runId, sample } }),
     onDone: (err: Error | null, result: TestResult) => {
       active.delete(runId)
+      runEngines.delete(runId)
       const wasStopped = stopped.delete(runId)
       if (err) {
         updateRunDone(runId, 'failed', null, err.message)
@@ -58,7 +94,14 @@ export function startTest(
 export function stopTest(runId: number): void {
   if (!active.has(runId)) return
   stopped.add(runId)
-  autocannon.stop(runId)
+  const engineType = runEngines.get(runId)
+  if (engineType && ENGINES[engineType]) {
+    ENGINES[engineType].stop(runId)
+  } else {
+    for (const eng of Object.values(ENGINES)) {
+      eng.stop(runId)
+    }
+  }
 }
 
 export function isRunning(runId: number): boolean {

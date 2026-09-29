@@ -40,7 +40,19 @@ function readBody(req) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+let hitCount = 0;
+
 createServer((req, res) => {
+  const count = ++hitCount;
+  const start = Date.now();
+  console.log(`[Hit #${count}] ${req.method} ${req.url}`);
+
+  res.on("finish", () => {
+    const elapsed = Date.now() - start;
+    // Log response status and elapsed time for visibility
+    console.log(`[Hit #${count}] -> ${res.statusCode} (${elapsed}ms)`);
+  });
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");

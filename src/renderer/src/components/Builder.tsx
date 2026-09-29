@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { validate, safetyWarnings } from '@shared/validation'
-import type { TestDefinition, HttpMethod } from '@shared/types'
+import type { TestDefinition, HttpMethod, EngineType } from '@shared/types'
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
@@ -212,10 +212,15 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
 
       <div className="card">
         <h2>Engine</h2>
-        <label className="field" style={{ maxWidth: 220 }}>
+        <label className="field" style={{ maxWidth: 280 }}>
           Engine
-          <select value={draft.engine} disabled>
-            <option value="autocannon">Autocannon</option>
+          <select
+            value={draft.engine}
+            onChange={(e) => set({ engine: e.target.value as EngineType })}
+          >
+            <option value="autocannon">Autocannon (Default)</option>
+            <option value="loadtest">loadtest (ab-compatible)</option>
+            <option value="artillery">Artillery (Scenario Runner)</option>
           </select>
         </label>
       </div>

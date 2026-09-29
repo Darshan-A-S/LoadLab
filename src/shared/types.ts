@@ -1,5 +1,5 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-export type EngineType = 'autocannon' | 'oho' | 'k6'
+export type EngineType = 'autocannon' | 'loadtest' | 'artillery'
 
 export interface TestDefinition {
   name: string
@@ -16,7 +16,7 @@ export interface TestDefinition {
     /** optional requests-per-second cap */
     rate?: number
   }
-  engine: 'autocannon'
+  engine: EngineType
 }
 
 export interface RunStatus {
