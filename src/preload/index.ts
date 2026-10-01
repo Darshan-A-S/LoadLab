@@ -5,10 +5,11 @@ import type {
   HistoryEntry,
   Collection,
   SampleEvent,
-  ResultEvent
+  ResultEvent,
+  RunEvent
 } from '../shared/types'
 
-export type RunEvent = { type: 'sample'; data: SampleEvent } | { type: 'result'; data: ResultEvent }
+export type { RunEvent }
 
 const loadlab = {
   scenarios: {
@@ -55,6 +56,9 @@ const loadlab = {
       const listener = (_e: unknown, max: boolean): void => cb(max)
       ipcRenderer.on('win:maximize-state', listener)
       return () => ipcRenderer.removeListener('win:maximize-state', listener)
+    },
+    toggleDevTools: (): void => {
+      void ipcRenderer.invoke('win:toggle-devtools')
     }
   }
 }

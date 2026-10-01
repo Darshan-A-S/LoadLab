@@ -4,9 +4,11 @@ import Dashboard from './components/Dashboard'
 import ResultCard from './components/ResultCard'
 import RunDetail from './components/RunDetail'
 import Collection from './components/Collection'
-import type { RunEvent } from '../../preload'
+import { ENGINE_DEFAULTS } from '@shared/types'
 import type {
   SampleEvent,
+  ResultEvent,
+  RunEvent,
   TestDefinition,
   TestResult,
   Scenario,
@@ -34,6 +36,10 @@ interface RunTab {
 
 type Tab = EditorTab | RunTab
 
+function isEditorTab(t: Tab): t is EditorTab {
+  return t.kind === 'editor'
+}
+
 export interface RunningState {
   runId: number
   samples: SampleEvent['sample'][]
@@ -52,6 +58,8 @@ export default function App(): JSX.Element {
   const [detailRun, setDetailRun] = useState<HistoryEntry | null>(null)
   const [resultPopup, setResultPopup] = useState<{ runId: number; status: string; result: TestResult } | null>(null)
   const [pickTarget, setPickTarget] = useState<{ tabId: number; closeAfter: boolean } | null>(null)
+  const [deleteScenarioTarget, setDeleteScenarioTarget] = useState<{ id: number; name: string } | null>(null)
+  const [deleteCollectionTarget, setDeleteCollectionTarget] = useState<{ id: number; name: string } | null>(null)
   const [newCollOpen, setNewCollOpen] = useState(false)
   const [newCollName, setNewCollName] = useState('')
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
@@ -142,8 +150,19 @@ export default function App(): JSX.Element {
     setActiveId(id)
   }, [])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault()
+        newTab()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [newTab])
+
   const openScenario = useCallback((s: Scenario): void => {
-    const existing = tabs.find((t) => t.kind === 'editor' && t.savedId === s.id)
+    const existing = tabs.find((t): t is EditorTab => t.kind === 'editor' && t.savedId === s.id)
     if (existing) {
       setActiveId(existing.id)
       return
@@ -174,7 +193,7 @@ export default function App(): JSX.Element {
 
   const closeTab = useCallback((id: number): void => {
     const t = tabs.find((x) => x.id === id)
-    if (t?.kind === 'editor' && t.draft !== undefined && JSON.stringify(t.draft) !== t.base) {
+    if (t && isEditorTab(t) && JSON.stringify(t.draft) !== t.base) {
       setCloseProbe(id)
       return
     }
@@ -205,7 +224,7 @@ export default function App(): JSX.Element {
   }
 
   function saveActive(): void {
-    const t = tabs.find((x) => x.kind === 'editor' && x.id === activeId)
+    const t = tabs.find((x): x is EditorTab => x.kind === 'editor' && x.id === activeId)
     if (!t) return
     if (t.collectionId == null) setPickTarget({ tabId: t.id, closeAfter: false })
     else saveTabTo(t.id, t.draft, t.collectionId)
@@ -213,7 +232,9 @@ export default function App(): JSX.Element {
 
   function runAgain(): void {
     if (!resultPopup) return
-    const tab = tabs.find((t) => t.kind === 'editor' && t.result && t.result.runId === resultPopup.runId)
+    const tab = tabs.find(
+      (t): t is EditorTab => t.kind === 'editor' && t.result !== null && t.result.runId === resultPopup.runId
+    )
     setResultPopup(null)
     if (!tab) return
     const set = (err: unknown): void =>
@@ -239,7 +260,7 @@ export default function App(): JSX.Element {
 
   function handleCloseChoice(choice: 'save' | 'discard' | 'cancel'): void {
     if (closeProbe == null) return
-    const t = tabs.find((x) => x.kind === 'editor' && x.id === closeProbe)
+    const t = tabs.find((x): x is EditorTab => x.kind === 'editor' && x.id === closeProbe)
     if (choice === 'discard') {
       const id = closeProbe
       setCloseProbe(null)
@@ -269,7 +290,7 @@ export default function App(): JSX.Element {
     if (!pickTarget) return
     const { tabId, closeAfter } = pickTarget
     setPickTarget(null)
-    const t = tabs.find((x) => x.kind === 'editor' && x.id === tabId)
+    const t = tabs.find((x): x is EditorTab => x.kind === 'editor' && x.id === tabId)
     if (!t) return
     saveTabTo(tabId, t.draft, collectionId)
     if (closeAfter) doClose(tabId)
@@ -325,12 +346,33 @@ export default function App(): JSX.Element {
       .catch((err) => alert(err instanceof Error ? err.message : String(err)))
   }
 
-  function deleteCollection(id: number): void {
+  function promptDeleteCollection(id: number): void {
+    const c = collections.find((x) => x.id === id)
+    setDeleteCollectionTarget({ id, name: c?.name || 'this collection' })
+  }
+
+  function confirmDeleteCollection(): void {
+    if (!deleteCollectionTarget) return
+    const id = deleteCollectionTarget.id
+    setDeleteCollectionTarget(null)
     void window.loadlab.collections.delete(id).then(refreshCollections)
   }
 
-  function deleteScenario(id: number): void {
-    void window.loadlab.scenarios.delete(id).then(refreshScenarios)
+  function promptDeleteScenario(id: number): void {
+    const s = scenarios.find((x) => x.id === id)
+    setDeleteScenarioTarget({ id, name: s?.name.trim() || 'Untitled Test' })
+  }
+
+  function confirmDeleteScenario(): void {
+    if (!deleteScenarioTarget) return
+    const id = deleteScenarioTarget.id
+    setDeleteScenarioTarget(null)
+    void window.loadlab.scenarios.delete(id).then(() => {
+      setTabs((ts) =>
+        ts.map((t) => (t.kind === 'editor' && t.savedId === id ? { ...t, savedId: null } : t))
+      )
+      refreshScenarios()
+    })
   }
 
   function tabLabel(t: Tab): string {
@@ -379,13 +421,13 @@ export default function App(): JSX.Element {
             collections={collections}
             history={history}
             onOpenScenario={openScenario}
-            onDeleteScenario={deleteScenario}
+            onDeleteScenario={promptDeleteScenario}
             onOpenHistory={openHistory}
             onNewInCollection={(collectionId) => newTab(collectionId)}
             onNewCollection={() => setNewCollOpen(true)}
             onRenameCollection={renameCollection}
             onDuplicateCollection={duplicateCollection}
-            onDeleteCollection={deleteCollection}
+            onDeleteCollection={promptDeleteCollection}
             onExportCollection={exportCollection}
             onImportCollection={importCollection}
           />
@@ -417,15 +459,44 @@ export default function App(): JSX.Element {
                 </span>
               </button>
             ))}
-            <button className="gtab-new" title="New Test" onClick={() => newTab()}>
+            <button className="gtab-new" title="New Test (Ctrl+N)" onClick={() => newTab()}>
               +
             </button>
             <span className="grow" />
           </div>
           <main>
             {!activeTab ? (
-              <div className="empty" style={{ height: '100%' }}>
-                Select a saved test or create a new one.
+              <div
+                className="empty"
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 14
+                }}
+              >
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+                  LoadLab
+                </div>
+                <div className="muted" style={{ maxWidth: 320, textAlign: 'center', lineHeight: 1.5 }}>
+                  Select a saved test from the sidebar or click below to configure a new load test.
+                </div>
+                <button
+                  className="primary"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 18px',
+                    fontSize: 13,
+                    marginTop: 6
+                  }}
+                  onClick={() => newTab()}
+                >
+                  + Create New Test
+                </button>
               </div>
             ) : activeTab.kind === 'run' ? (
               <RunDetail run={activeTab.run} />
@@ -562,6 +633,44 @@ export default function App(): JSX.Element {
           </div>
         </div>
       )}
+
+      {deleteScenarioTarget && (
+        <div className="modal-backdrop" onClick={() => setDeleteScenarioTarget(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: '0 0 8px 0', fontSize: 13.5, fontWeight: 600 }}>
+              Delete Test?
+            </p>
+            <p className="muted" style={{ margin: '0 0 14px 0', fontSize: 12.5, lineHeight: 1.4 }}>
+              Are you sure you want to delete <strong>&quot;{deleteScenarioTarget.name}&quot;</strong>? This action cannot be undone.
+            </p>
+            <div className="actions">
+              <button onClick={() => setDeleteScenarioTarget(null)}>Cancel</button>
+              <button className="danger" onClick={confirmDeleteScenario}>
+                Delete Test
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteCollectionTarget && (
+        <div className="modal-backdrop" onClick={() => setDeleteCollectionTarget(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: '0 0 8px 0', fontSize: 13.5, fontWeight: 600 }}>
+              Delete Collection?
+            </p>
+            <p className="muted" style={{ margin: '0 0 14px 0', fontSize: 12.5, lineHeight: 1.4 }}>
+              Are you sure you want to delete collection <strong>&quot;{deleteCollectionTarget.name}&quot;</strong>? Tests in this collection will be moved to the default collection.
+            </p>
+            <div className="actions">
+              <button onClick={() => setDeleteCollectionTarget(null)}>Cancel</button>
+              <button className="danger" onClick={confirmDeleteCollection}>
+                Delete Collection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -570,7 +679,7 @@ function defaultDraft(): TestDefinition {
   return {
     name: '',
     target: { url: 'http://localhost:3000/', method: 'GET', headers: {}, body: '' },
-    load: { connections: 100, durationSeconds: 30, pipelining: 1, rate: undefined },
+    load: { ...ENGINE_DEFAULTS.autocannon },
     engine: 'autocannon'
   }
 }

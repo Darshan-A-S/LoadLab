@@ -1,6 +1,16 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type EngineType = 'autocannon' | 'loadtest' | 'artillery'
 
+export interface AuthConfig {
+  type: 'none' | 'bearer' | 'basic' | 'apikey'
+  token?: string
+  username?: string
+  password?: string
+  key?: string
+  value?: string
+  addTo?: 'header' | 'query'
+}
+
 export interface TestDefinition {
   name: string
   target: {
@@ -8,6 +18,7 @@ export interface TestDefinition {
     method: HttpMethod
     headers?: Record<string, string>
     body?: string
+    auth?: AuthConfig
   }
   load: {
     connections: number
@@ -17,6 +28,27 @@ export interface TestDefinition {
     rate?: number
   }
   engine: EngineType
+}
+
+export const ENGINE_DEFAULTS: Record<EngineType, TestDefinition['load']> = {
+  autocannon: {
+    connections: 100,
+    durationSeconds: 30,
+    pipelining: 1,
+    rate: undefined
+  },
+  loadtest: {
+    connections: 25,
+    durationSeconds: 20,
+    pipelining: 1,
+    rate: undefined
+  },
+  artillery: {
+    connections: 20,
+    durationSeconds: 30,
+    pipelining: 1,
+    rate: undefined
+  }
 }
 
 export interface RunStatus {
@@ -102,3 +134,7 @@ export type ResultEvent = {
   error?: string
   result?: TestResult
 }
+
+export type RunEvent =
+  | { type: 'sample'; data: SampleEvent }
+  | { type: 'result'; data: ResultEvent }

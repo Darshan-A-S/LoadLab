@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { validate, safetyWarnings } from '@shared/validation'
-import type { TestDefinition, HttpMethod, EngineType } from '@shared/types'
+import { ENGINE_DEFAULTS, type TestDefinition, type HttpMethod, type EngineType } from '@shared/types'
+import RequestEditor from './RequestEditor'
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
@@ -34,7 +35,24 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
   const setTarget = (patch: Partial<TestDefinition['target']>): void =>
     set({ target: { ...draft.target, ...patch } })
 
-  const headers = Object.entries(draft.target.headers ?? {})
+  const handleEngineChange = (newEngine: EngineType): void => {
+    const curDef = ENGINE_DEFAULTS[draft.engine] ?? ENGINE_DEFAULTS.autocannon
+    const isAtCurrentDefaults =
+      draft.load.connections === curDef.connections &&
+      draft.load.durationSeconds === curDef.durationSeconds &&
+      draft.load.pipelining === curDef.pipelining &&
+      draft.load.rate === curDef.rate
+
+    const newDef = ENGINE_DEFAULTS[newEngine] ?? ENGINE_DEFAULTS.autocannon
+    if (isAtCurrentDefaults) {
+      set({
+        engine: newEngine,
+        load: { ...newDef }
+      })
+    } else {
+      set({ engine: newEngine })
+    }
+  }
 
   async function start(): Promise<void> {
     const warnings: string[] = []
@@ -58,7 +76,8 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
     setStarting(true)
     onError(null)
     try {
-      const runId = await window.loadlab.runs.start(draft)
+      const runDraft = { ...draft, name: draft.name.trim() || 'Untitled Test' }
+      const runId = await window.loadlab.runs.start(runDraft)
       onStarted(runId)
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e))
@@ -70,8 +89,15 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
   return (
     <div>
       <div className="headerbar">
-        <h1 style={{ margin: 0 }}>New Test</h1>
-        <button onClick={onSave} disabled={!draft.name.trim()}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, marginRight: 12 }}>
+          <input
+            className="test-name-header-input"
+            value={draft.name}
+            onChange={(e) => set({ name: e.target.value })}
+            placeholder="Untitled Test (enter test name...)"
+          />
+        </div>
+        <button onClick={onSave} title="Save test to a collection">
           Save Test
         </button>
       </div>
@@ -90,140 +116,20 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
         </button>
       </div>
 
-      <div className="card">
-        <h2>Target</h2>
-        <label className="field">
-          Name
-          <input
-            value={draft.name}
-            onChange={(e) => set({ name: e.target.value })}
-            placeholder="e.g. Local Users API"
-          />
-        </label>
-      </div>
-
-      <div className="card">
-        <h2>Load</h2>
-        <div className="row">
-          <label className="field">
-            Connections
-            <input
-              type="number"
-              min={1}
-              value={draft.load.connections}
-              onChange={(e) => setLoad({ connections: Number(e.target.value) })}
-            />
-          </label>
-          <label className="field">
-            Duration (seconds)
-            <input
-              type="number"
-              min={1}
-              value={draft.load.durationSeconds}
-              onChange={(e) => setLoad({ durationSeconds: Number(e.target.value) })}
-            />
-          </label>
-          <label className="field">
-            Pipelining
-            <input
-              type="number"
-              min={1}
-              value={draft.load.pipelining}
-              onChange={(e) => setLoad({ pipelining: Number(e.target.value) })}
-            />
-          </label>
-          <label className="field">
-            Rate cap (req/s, optional)
-            <input
-              type="number"
-              min={1}
-              value={draft.load.rate ?? ''}
-              placeholder="unlimited"
-              onChange={(e) =>
-                setLoad({ rate: e.target.value === '' ? undefined : Number(e.target.value) })
-              }
-            />
-          </label>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Request</h2>
-        {headers.map(([k, v], i) => (
-          <div className="header-row" key={i}>
-            <input
-              value={k}
-              placeholder="Header"
-              onChange={(e) => {
-                const newKey = e.target.value.trim()
-                if (!newKey) return
-                const next = { ...draft.target.headers }
-                delete next[k]
-                next[newKey] = v
-                setTarget({ headers: next })
-              }}
-            />
-            <input
-              value={v}
-              placeholder="Value"
-              onChange={(e) => {
-                const next = { ...draft.target.headers, [k]: e.target.value }
-                setTarget({ headers: next })
-              }}
-            />
-            <button
-              onClick={() => {
-                const next = { ...draft.target.headers }
-                delete next[k]
-                setTarget({ headers: next })
-              }}
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-        <button
-          onClick={() => setTarget({ headers: { ...draft.target.headers, Cookie: '' } })}
-          disabled={headers.some(([k]) => k.toLowerCase() === 'cookie')}
-        >
-          + Add Cookie
-        </button>
-        {headers.some(([k]) => k.toLowerCase() === 'cookie') && (
-          <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-            Format: <code>name=value; name2=value2</code>
-          </p>
-        )}
-        <button
-          onClick={() => setTarget({ headers: { ...draft.target.headers, '': '' } })}
-          disabled={headers.some(([k]) => k === '')}
-        >
-          + Add Header
-        </button>
-        <label className="field" style={{ marginTop: 12 }}>
-          Body
-          <textarea
-            rows={3}
-            value={draft.target.body ?? ''}
-            placeholder="Optional request body"
-            onChange={(e) => setTarget({ body: e.target.value })}
-          />
-        </label>
-      </div>
-
-      <div className="card">
-        <h2>Engine</h2>
-        <label className="field" style={{ maxWidth: 280 }}>
-          Engine
-          <select
-            value={draft.engine}
-            onChange={(e) => set({ engine: e.target.value as EngineType })}
-          >
-            <option value="autocannon">Autocannon (Default)</option>
-            <option value="loadtest">loadtest (ab-compatible)</option>
-            <option value="artillery">Artillery (Scenario Runner)</option>
-          </select>
-        </label>
-      </div>
+      <RequestEditor
+        url={draft.target.url}
+        onUrlChange={(url) => setTarget({ url })}
+        headers={draft.target.headers ?? {}}
+        onHeadersChange={(headers) => setTarget({ headers })}
+        body={draft.target.body ?? ''}
+        onBodyChange={(body) => setTarget({ body })}
+        auth={draft.target.auth}
+        onAuthChange={(auth) => setTarget({ auth })}
+        load={draft.load}
+        onLoadChange={setLoad}
+        engine={draft.engine}
+        onEngineChange={handleEngineChange}
+      />
 
       {error && <p className="error">{error}</p>}
       {!v.ok && (

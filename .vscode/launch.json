@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch LoadLab (Debug Mode)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "windows": {
+        "runtimeExecutable": "npm.cmd"
+      },
+      "runtimeArgs": ["run", "debug"],
+      "port": 9229,
+      "sourceMaps": true,
+      "outputCapture": "std",
+      "console": "integratedTerminal",
+      "restart": true
+    },
+    {
+      "name": "Attach to Main Process (Port 9229)",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "cwd": "${workspaceFolder}",
+      "sourceMaps": true,
+      "restart": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Attach to Renderer (Port 9222)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}/src/renderer",
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug All (Main + Renderer)",
+      "configurations": [
+        "Attach to Main Process (Port 9229)",
+        "Attach to Renderer (Port 9222)"
+      ]
+    }
+  ]
+}

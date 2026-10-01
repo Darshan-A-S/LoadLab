@@ -1,8 +1,6 @@
-import type { TestDefinition, Scenario, HistoryEntry, Collection, SampleEvent, ResultEvent } from '../shared/types'
+import type { TestDefinition, Scenario, HistoryEntry, Collection, SampleEvent, ResultEvent, RunEvent } from '../shared/types'
 
-export type RunEvent =
-  | { type: 'sample'; data: SampleEvent }
-  | { type: 'result'; data: ResultEvent }
+export type { RunEvent }
 
 declare global {
   interface Window {
@@ -35,6 +33,7 @@ declare global {
         close: () => void
         isMaximized: () => Promise<boolean>
         onMaximizedState: (cb: (maximized: boolean) => void) => () => void
+        toggleDevTools: () => void
       }
     }
   }

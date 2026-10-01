@@ -124,6 +124,80 @@ textarea {
   resize: vertical;
 }
 
+/* Hide native number input spinners across all engines */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  appearance: textfield;
+}
+
+/* Custom Number Input with Sleek Chevrons */
+.number-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.number-input-wrapper input {
+  padding-right: 22px;
+}
+
+.number-steppers {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 20px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--panel-2);
+  border-top-right-radius: calc(var(--radius) - 1px);
+  border-bottom-right-radius: calc(var(--radius) - 1px);
+  overflow: hidden;
+  user-select: none;
+}
+
+.stepper-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.1s ease, color 0.1s ease;
+  min-height: 0;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.stepper-btn:active:not(:disabled) {
+  background: var(--border);
+  color: var(--accent);
+}
+
+.stepper-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.stepper-btn svg {
+  display: block;
+}
+
 label.field {
   display: flex;
   flex-direction: column;
@@ -546,7 +620,10 @@ label.field {
   font-size: 14px;
   line-height: 1;
   padding: 0 4px;
-  opacity: 0;
+  opacity: 0.6;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: opacity 0.15s, color 0.15s;
 }
 
 .collection-head:hover .collection-head-add {
@@ -554,6 +631,7 @@ label.field {
 }
 
 .collection-head-add:hover {
+  opacity: 1;
   color: var(--accent);
 }
 
@@ -1115,4 +1193,254 @@ tr:hover td {
   flex: none;
   height: 30px;
   min-width: 88px;
+}
+
+/* Postman-Style Request Tabs & Sub-editor */
+.postman-card {
+  padding: 10px 14px 14px;
+}
+
+.postman-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.postman-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.1s ease, border-color 0.1s ease;
+}
+
+.postman-tab-btn:hover {
+  color: var(--text);
+  border-color: transparent;
+  background: transparent;
+}
+
+.postman-tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: transparent;
+  font-weight: 600;
+}
+
+.postman-tab-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.postman-tab-btn.active .postman-tab-badge {
+  background: rgba(255, 108, 55, 0.15);
+  color: var(--accent);
+}
+
+.postman-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+.tab-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tab-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+
+/* Postman Key-Value Table */
+.kv-table {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--chrome);
+  border-collapse: collapse;
+}
+
+.kv-table th {
+  background: var(--panel-2);
+  padding: 5px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.kv-table th:last-child {
+  border-right: none;
+}
+
+.kv-table td {
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  background: var(--chrome);
+  vertical-align: middle;
+}
+
+.kv-table td:last-child {
+  border-right: none;
+}
+
+.kv-table tr:last-child td {
+  border-bottom: none;
+}
+
+.kv-table input[type="text"] {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 5px 8px;
+  font-size: 12px;
+  width: 100%;
+  color: var(--text);
+}
+
+.kv-table input[type="text"]:focus {
+  background: var(--panel-2);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.kv-table input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+}
+
+.kv-table tr:hover td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.kv-empty-row td {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.kv-del-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 3px;
+  opacity: 0.4;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.kv-table tr:hover .kv-del-btn {
+  opacity: 0.8;
+}
+
+.kv-del-btn:hover {
+  background: rgba(229, 83, 75, 0.15);
+  color: var(--danger);
+  opacity: 1 !important;
+}
+
+.kv-eye-btn {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.kv-eye-btn:hover {
+  color: var(--text);
+}
+
+/* Auth Preview */
+.auth-preview-badge {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--panel-2);
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+}
+
+.auth-preview-badge code {
+  color: var(--accent-2);
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+/* Code Textarea */
+.code-textarea {
+  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  background: var(--chrome);
+  color: #f1f1f1;
+  tab-size: 2;
+  white-space: pre;
+}
+
+/* Postman-Style Test Name in Headerbar */
+.test-name-header-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 8px;
+  width: 100%;
+  max-width: 480px;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.test-name-header-input:hover {
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.test-name-header-input:focus {
+  border-color: var(--accent);
+  background: var(--panel);
+  outline: none;
 }

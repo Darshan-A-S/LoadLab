@@ -28,7 +28,6 @@ function isLocalHostname(hostname: string): boolean {
 
 export function validate(test: TestDefinition): ValidationResult {
   const errors: string[] = []
-  if (!test.name?.trim()) errors.push('Test name is required')
   if (!validateUrl(test.target.url)) errors.push('Target must be a valid http(s) URL')
   if (!METHODS.includes(test.target.method)) errors.push('Unsupported HTTP method')
   const h = test.target.headers ?? {}

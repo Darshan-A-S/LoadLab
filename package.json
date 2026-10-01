@@ -6,6 +6,9 @@
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
+    "debug": "electron-vite dev --inspect=9229 --remoteDebuggingPort=9222 --sourcemap",
+    "debug:devtools": "electron-vite dev --inspect=9229 --remoteDebuggingPort=9222 --sourcemap -- --devtools",
+    "debug:brk": "electron-vite dev --inspectBrk=9229 --sourcemap",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "dist": "electron-vite build && electron-builder",

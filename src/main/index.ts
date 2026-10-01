@@ -20,7 +20,8 @@ function createWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      devTools: true
     }
   })
 
@@ -31,6 +32,33 @@ function createWindow(): BrowserWindow {
   }
   win.on('maximize', () => send('win:maximize-state', true))
   win.on('unmaximize', () => send('win:maximize-state', false))
+
+  // Debugging shortcuts: F12 / Ctrl+Shift+I / Cmd+Option+I for DevTools, F5 / Ctrl+R for Reload
+  win.webContents.on('before-input-event', (event, input) => {
+    if (
+      input.key === 'F12' ||
+      ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i')
+    ) {
+      win.webContents.toggleDevTools()
+      event.preventDefault()
+    }
+    if (
+      !app.isPackaged &&
+      (input.key === 'F5' || ((input.control || input.meta) && input.key.toLowerCase() === 'r'))
+    ) {
+      win.webContents.reload()
+      event.preventDefault()
+    }
+  })
+
+  // Auto-open DevTools if requested
+  if (
+    !app.isPackaged &&
+    (process.env.OPEN_DEVTOOLS === 'true' || process.argv.includes('--devtools'))
+  ) {
+    win.webContents.openDevTools({ mode: 'detach' })
+  }
+
   return win
 }
 
@@ -57,6 +85,9 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('win:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
   ipcMain.handle('win:is-maximized', (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false)
+  ipcMain.handle('win:toggle-devtools', (e) => {
+    BrowserWindow.fromWebContents(e.sender)?.webContents.toggleDevTools()
+  })
 
   ipcMain.handle('scenarios:list', () => listScenarios())
   ipcMain.handle('scenarios:save', (_e, test: TestDefinition, collectionId: number | null) => ({
