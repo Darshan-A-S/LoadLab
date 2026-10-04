@@ -1203,16 +1203,23 @@ tr:hover td {
 .postman-tabs-bar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 2px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 12px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.postman-tabs-bar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .postman-tab-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -1222,6 +1229,8 @@ tr:hover td {
   font-weight: 500;
   cursor: pointer;
   margin-bottom: -1px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color 0.1s ease, border-color 0.1s ease;
 }
 

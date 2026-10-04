@@ -15,10 +15,10 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
 
 interface Props {
   draft: TestDefinition
-  onChange: (d: TestDefinition) => void
+  onChange: (d: TestDefinition | ((prev: TestDefinition) => TestDefinition)) => void
   error: string | null
   onStarted: (runId: number) => void
-  onError: (msg: string) => void
+  onError: (msg: string | null) => void
   onSave: () => void
 }
 
@@ -29,11 +29,13 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
   const v = useMemo(() => validate(draft), [draft])
   const safety = useMemo(() => safetyWarnings(draft), [draft])
 
-  const set = (patch: Partial<TestDefinition>): void => onChange({ ...draft, ...patch })
+  const set = (patch: Partial<TestDefinition> | ((prev: TestDefinition) => TestDefinition)): void => {
+    onChange((prev) => (typeof patch === 'function' ? patch(prev) : { ...prev, ...patch }))
+  }
   const setLoad = (patch: Partial<TestDefinition['load']>): void =>
-    set({ load: { ...draft.load, ...patch } })
+    set((prev) => ({ ...prev, load: { ...prev.load, ...patch } }))
   const setTarget = (patch: Partial<TestDefinition['target']>): void =>
-    set({ target: { ...draft.target, ...patch } })
+    set((prev) => ({ ...prev, target: { ...prev.target, ...patch } }))
 
   const handleEngineChange = (newEngine: EngineType): void => {
     const curDef = ENGINE_DEFAULTS[draft.engine] ?? ENGINE_DEFAULTS.autocannon

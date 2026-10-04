@@ -2,13 +2,10 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type EngineType = 'autocannon' | 'loadtest' | 'artillery'
 
 export interface AuthConfig {
-  type: 'none' | 'bearer' | 'basic' | 'apikey'
+  type: 'none' | 'bearer' | 'basic'
   token?: string
   username?: string
   password?: string
-  key?: string
-  value?: string
-  addTo?: 'header' | 'query'
 }
 
 export interface TestDefinition {

@@ -509,7 +509,7 @@ export default function App(): JSX.Element {
             ) : (
               <Builder
                 draft={activeTab.draft}
-                onChange={(d) => updateActive((t) => ({ ...t, draft: d }))}
+                onChange={(d) => updateActive((t) => ({ ...t, draft: typeof d === 'function' ? d(t.draft) : d }))}
                 error={activeTab.error}
                 onStarted={(runId) => updateActive((t) => ({ ...t, running: { runId, samples: [] }, error: null, result: null }))}
                 onError={(msg) => updateActive((t) => ({ ...t, error: msg }))}
