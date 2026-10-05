@@ -1,6 +1,6 @@
 {
   "name": "loadlab",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local-first load testing for developers",
   "main": "out/main/index.js",
   "private": true,
@@ -13,6 +13,7 @@
     "start": "electron-vite preview",
     "dist": "electron-vite build && electron-builder",
     "selfcheck": "node scripts/selfcheck.mjs",
+    "download:engines": "node scripts/download-engines.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -41,6 +42,9 @@
     "productName": "LoadLab",
     "files": [
       "out/**/*"
+    ],
+    "extraResources": [
+      "bin/**/*"
     ],
     "win": {
       "target": "nsis"

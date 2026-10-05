@@ -4,6 +4,8 @@ import { once } from 'node:events'
 import * as autocannon from '../src/main/engine/autocannon.ts'
 import * as loadtest from '../src/main/engine/loadtest.ts'
 import * as artillery from '../src/main/engine/artillery.ts'
+import * as oha from '../src/main/engine/oha.ts'
+import * as bombardier from '../src/main/engine/bombardier.ts'
 
 const server = http.createServer((req, res) => {
   setTimeout(() => {
@@ -18,7 +20,9 @@ const port = server.address().port
 const engines = [
   { name: 'autocannon', adapter: autocannon },
   { name: 'loadtest', adapter: loadtest },
-  { name: 'artillery', adapter: artillery }
+  { name: 'artillery', adapter: artillery },
+  { name: 'oha', adapter: oha },
+  { name: 'bombardier', adapter: bombardier }
 ]
 
 console.log('Testing engines against test server on port', port)

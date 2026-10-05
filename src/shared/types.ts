@@ -1,5 +1,5 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-export type EngineType = 'autocannon' | 'loadtest' | 'artillery'
+export type EngineType = 'autocannon' | 'loadtest' | 'artillery' | 'oha' | 'bombardier'
 
 export interface AuthConfig {
   type: 'none' | 'bearer' | 'basic'
@@ -43,6 +43,18 @@ export const ENGINE_DEFAULTS: Record<EngineType, TestDefinition['load']> = {
   artillery: {
     connections: 20,
     durationSeconds: 30,
+    pipelining: 1,
+    rate: undefined
+  },
+  oha: {
+    connections: 50,
+    durationSeconds: 15,
+    pipelining: 1,
+    rate: undefined
+  },
+  bombardier: {
+    connections: 100,
+    durationSeconds: 15,
     pipelining: 1,
     rate: undefined
   }
