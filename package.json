@@ -40,6 +40,7 @@
   "build": {
     "appId": "dev.loadlab.app",
     "productName": "LoadLab",
+    "npmRebuild": false,
     "files": [
       "out/**/*"
     ],
