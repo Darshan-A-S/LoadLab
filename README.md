@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./load-lab-svg.svg" alt="LoadLab Logo" width="100" height="100" />
+
 # LoadLab
 
 **Local-first HTTP load testing for developers.**
@@ -56,7 +58,7 @@ With LoadLab, you can effortlessly test:
 - **Embedded SQLite Storage**: All test configurations, runs, and time-series telemetry are stored locally in SQLite with WAL mode.
 - **Import & Export**: One-click JSON collection import/export and JSON/CSV run report generation.
 - **Built-in Safety Guardrails**: Proactive confirmation prompts when targeting external remote hosts or using aggressive concurrency configs.
-- **Pluggable Engine Architecture**: Preconfigured with [Autocannon](https://github.com/mcollina/autocannon) and designed to support [oha](https://github.com/hatoo/oha), [wrk](https://github.com/wg/wrk), and [k6](https://k6.io/).
+- **Pluggable Engine Architecture**: Comes out-of-the-box with **Autocannon**, **loadtest**, **Artillery**, and native high-performance **[oha](https://github.com/hatoo/oha)** (Rust) and **[Bombardier](https://github.com/codesenberg/bombardier)** (Go) engines.
 
 ---
 
