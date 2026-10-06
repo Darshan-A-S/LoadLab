@@ -4,6 +4,8 @@ import Dashboard from './components/Dashboard'
 import ResultCard from './components/ResultCard'
 import RunDetail from './components/RunDetail'
 import Collection from './components/Collection'
+import ComparePicker from './components/ComparePicker'
+import CompareRuns from './components/CompareRuns'
 import { ENGINE_DEFAULTS } from '@shared/types'
 import type {
   SampleEvent,
@@ -43,6 +45,11 @@ function isEditorTab(t: Tab): t is EditorTab {
 export interface RunningState {
   runId: number
   samples: SampleEvent['sample'][]
+  startedAt?: number
+  engine?: EngineType
+  durationSeconds?: number
+  connections?: number
+  targetUrl?: string
 }
 
 let nextTabId = 1
@@ -57,6 +64,8 @@ export default function App(): JSX.Element {
   const [closeProbe, setCloseProbe] = useState<number | null>(null)
   const [detailRun, setDetailRun] = useState<HistoryEntry | null>(null)
   const [resultPopup, setResultPopup] = useState<{ runId: number; status: string; result: TestResult } | null>(null)
+  const [comparePickerRun, setComparePickerRun] = useState<HistoryEntry | null>(null)
+  const [compareModal, setCompareModal] = useState<{ runA: HistoryEntry; runB: HistoryEntry } | null>(null)
   const [pickTarget, setPickTarget] = useState<{ tabId: number; closeAfter: boolean } | null>(null)
   const [deleteScenarioTarget, setDeleteScenarioTarget] = useState<{ id: number; name: string } | null>(null)
   const [deleteCollectionTarget, setDeleteCollectionTarget] = useState<{ id: number; name: string } | null>(null)
@@ -110,7 +119,7 @@ export default function App(): JSX.Element {
         setTabs((ts) =>
           ts.map((t) =>
             t.kind === 'editor' && t.running && t.running.runId === runId
-              ? { ...t, running: { runId, samples: [...t.running.samples, sample] } }
+              ? { ...t, running: { ...t.running, samples: [...t.running.samples, sample] } }
               : t
           )
         )
@@ -120,7 +129,7 @@ export default function App(): JSX.Element {
         setTabs((ts) =>
           ts.map((t) => {
             if (t.kind !== 'editor' || !t.running || t.running.runId !== d.runId) return t
-            if (d.status === 'running') return { ...t, running: { runId: d.runId, samples: [] } }
+            if (d.status === 'running') return { ...t, running: { ...t.running, runId: d.runId } }
             if (d.error) return { ...t, running: null, error: d.error }
             if (d.result) {
               return { ...t, running: null, result: { runId: d.runId, status: d.status, result: d.result } }
@@ -250,13 +259,64 @@ export default function App(): JSX.Element {
         setTabs((ts) =>
           ts.map((t) =>
             t.kind === 'editor' && t.id === tab.id
-              ? { ...t, running: { runId, samples: [] }, error: null, result: null }
+              ? {
+                  ...t,
+                  running: {
+                    runId,
+                    samples: [],
+                    startedAt: Date.now(),
+                    engine: tab.draft.engine,
+                    durationSeconds: Number(tab.draft.load.durationSeconds) || 30,
+                    connections: Number(tab.draft.load.connections) || 10,
+                    targetUrl: tab.draft.target.url
+                  },
+                  error: null,
+                  result: null
+                }
               : t
           )
         ),
       set
     )
   }
+
+  const startCompare = useCallback((run: HistoryEntry): void => {
+    setComparePickerRun(run)
+  }, [])
+
+  const handleSelectCompareCandidate = useCallback(
+    (candidate: HistoryEntry): void => {
+      if (!comparePickerRun) return
+      setCompareModal({ runA: comparePickerRun, runB: candidate })
+      setComparePickerRun(null)
+      setResultPopup(null)
+      setDetailRun(null)
+    },
+    [comparePickerRun]
+  )
+
+  const handleResultPopupCompare = useCallback((): void => {
+    if (!resultPopup) return
+    const found = history.find((h) => h.runId === resultPopup.runId)
+    if (found) {
+      startCompare(found)
+    } else {
+      const activeTab = tabs.find(
+        (t): t is EditorTab => t.kind === 'editor' && t.result?.runId === resultPopup.runId
+      )
+      const synthetic: HistoryEntry = {
+        runId: resultPopup.runId,
+        name: activeTab?.draft.name || 'Current Test',
+        target: activeTab?.draft.target.url || '',
+        engine: activeTab?.draft.engine || 'autocannon',
+        status: 'completed',
+        startedAt: resultPopup.result.startedAt,
+        finishedAt: resultPopup.result.finishedAt,
+        result: resultPopup.result
+      }
+      startCompare(synthetic)
+    }
+  }, [resultPopup, history, tabs, startCompare])
 
   function handleCloseChoice(choice: 'save' | 'discard' | 'cancel'): void {
     if (closeProbe == null) return
@@ -423,6 +483,7 @@ export default function App(): JSX.Element {
             onOpenScenario={openScenario}
             onDeleteScenario={promptDeleteScenario}
             onOpenHistory={openHistory}
+            onCompareRun={startCompare}
             onNewInCollection={(collectionId) => newTab(collectionId)}
             onNewCollection={() => setNewCollOpen(true)}
             onRenameCollection={renameCollection}
@@ -504,6 +565,11 @@ export default function App(): JSX.Element {
               <Dashboard
                 runId={activeTab.running.runId}
                 samples={activeTab.running.samples}
+                startedAt={activeTab.running.startedAt}
+                engine={activeTab.running.engine || activeTab.draft.engine}
+                durationSec={activeTab.running.durationSeconds || activeTab.draft.load.durationSeconds}
+                targetUrl={activeTab.running.targetUrl || activeTab.draft.target.url}
+                connections={activeTab.running.connections || activeTab.draft.load.connections}
                 onStop={() => void window.loadlab.runs.stop(activeTab.running!.runId)}
               />
             ) : (
@@ -511,7 +577,22 @@ export default function App(): JSX.Element {
                 draft={activeTab.draft}
                 onChange={(d) => updateActive((t) => ({ ...t, draft: typeof d === 'function' ? d(t.draft) : d }))}
                 error={activeTab.error}
-                onStarted={(runId) => updateActive((t) => ({ ...t, running: { runId, samples: [] }, error: null, result: null }))}
+                onStarted={(runId, def) =>
+                  updateActive((t) => ({
+                    ...t,
+                    running: {
+                      runId,
+                      samples: [],
+                      startedAt: Date.now(),
+                      engine: def?.engine || t.draft.engine,
+                      durationSeconds: Number(def?.load.durationSeconds || t.draft.load.durationSeconds) || 30,
+                      connections: Number(def?.load.connections || t.draft.load.connections) || 10,
+                      targetUrl: def?.target.url || t.draft.target.url
+                    },
+                    error: null,
+                    result: null
+                  }))
+                }
                 onError={(msg) => updateActive((t) => ({ ...t, error: msg }))}
                 onSave={saveActive}
               />
@@ -615,6 +696,7 @@ export default function App(): JSX.Element {
               result={resultPopup.result}
               status={resultPopup.status}
               onRunAgain={runAgain}
+              onCompare={handleResultPopupCompare}
             />
             <div className="actions">
               <button onClick={() => setResultPopup(null)}>Close</button>
@@ -626,12 +708,44 @@ export default function App(): JSX.Element {
       {detailRun && (
         <div className="modal-backdrop" onClick={() => setDetailRun(null)}>
           <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
-            <RunDetail run={detailRun} />
+            <RunDetail
+              run={detailRun}
+              onCompare={(run) => startCompare(run)}
+            />
             <div className="actions">
               <button className="primary" onClick={() => setDetailRun(null)}>Close</button>
             </div>
           </div>
         </div>
+      )}
+
+      {comparePickerRun && (
+        <ComparePicker
+          currentRun={comparePickerRun}
+          runs={history}
+          onSelect={handleSelectCompareCandidate}
+          onClose={() => setComparePickerRun(null)}
+        />
+      )}
+
+      {compareModal && (
+        <CompareRuns
+          runA={compareModal.runA}
+          runB={compareModal.runB}
+          allRuns={history}
+          onSwap={() =>
+            setCompareModal((prev) =>
+              prev ? { runA: prev.runB, runB: prev.runA } : null
+            )
+          }
+          onChangeRunA={(runA) =>
+            setCompareModal((prev) => (prev ? { ...prev, runA } : null))
+          }
+          onChangeRunB={(runB) =>
+            setCompareModal((prev) => (prev ? { ...prev, runB } : null))
+          }
+          onClose={() => setCompareModal(null)}
+        />
       )}
 
       {deleteScenarioTarget && (

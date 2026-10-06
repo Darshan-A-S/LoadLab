@@ -40,7 +40,6 @@ export interface EngineStartCallbacks {
 
 interface ActiveProcess {
   child: ChildProcess
-  timer: NodeJS.Timeout
 }
 
 const activeProcesses = new Map<number, ActiveProcess>()
@@ -91,10 +90,12 @@ interface OhaOutput {
 export function start(config: TestDefinition, runId: number, cb: EngineStartCallbacks): void {
   const binPath = findBinary('oha')
   const startedAt = Date.now()
+  const durationSec = Math.max(1, Math.round(Number(config.load.durationSeconds) || 15))
+  const connections = Math.max(1, Math.round(Number(config.load.connections) || 10))
 
   const args: string[] = [
-    '-z', `${config.load.durationSeconds}s`,
-    '-c', String(config.load.connections),
+    '-z', `${durationSec}s`,
+    '-c', String(connections),
     '-m', config.target.method,
     '--no-tui',
     '--output-format', 'json'
@@ -141,24 +142,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     return
   }
 
-  const samples: TimeSeriesSample[] = []
-
-  const timer = setInterval(() => {
-    const elapsedSec = Math.round((Date.now() - startedAt) / 1000)
-    const sample: TimeSeriesSample = {
-      t: elapsedSec,
-      rps: 0,
-      latency: 0,
-      errors: 0,
-      throughput: 0,
-      totalRequests: 0,
-      totalErrors: 0
-    }
-    samples.push(sample)
-    cb.onSample(sample)
-  }, 1000)
-
-  activeProcesses.set(runId, { child, timer })
+  activeProcesses.set(runId, { child })
 
   child.stdout?.on('data', (chunk: Buffer) => {
     stdout += chunk.toString('utf8')
@@ -169,13 +153,11 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
   })
 
   child.on('error', (err) => {
-    clearInterval(timer)
     activeProcesses.delete(runId)
     cb.onDone(err, null as unknown as TestResult)
   })
 
   child.on('close', (code) => {
-    clearInterval(timer)
     activeProcesses.delete(runId)
 
     if (code !== 0 && !stdout.trim()) {
@@ -186,7 +168,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     try {
       const raw = JSON.parse(stdout) as OhaOutput
       const finishedAt = new Date().toISOString()
-      const durationSec = raw.summary?.total ? Math.round(raw.summary.total) : config.load.durationSeconds
+      const actualDurationSec = raw.summary?.total ? Math.round(raw.summary.total) : durationSec
 
       const statusCodes: Record<string, number> = {}
       let totalRequests = 0
@@ -201,7 +183,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
       }
 
       if (totalRequests === 0 && raw.summary?.requestsPerSec) {
-        totalRequests = Math.round(raw.summary.requestsPerSec * durationSec)
+        totalRequests = Math.round(raw.summary.requestsPerSec * actualDurationSec)
       }
 
       let timeoutErrors = 0
@@ -234,12 +216,12 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
         raw.metrics?.latency_ms?.p99 ?? (raw.latencyPercentiles?.p99 ? raw.latencyPercentiles.p99 * 1000 : p95)
       ) || p95
 
-      const rps = Math.round(raw.summary?.requestsPerSec ?? (durationSec > 0 ? totalRequests / durationSec : totalRequests))
+      const rps = Math.round(raw.summary?.requestsPerSec ?? (actualDurationSec > 0 ? totalRequests / actualDurationSec : totalRequests))
       const throughput = Math.round(raw.summary?.sizePerSec ?? 0)
 
       // Synthesize smooth sample points for the charts
       const timeSeries: TimeSeriesSample[] = []
-      const stepCount = Math.max(1, durationSec)
+      const stepCount = Math.max(1, actualDurationSec)
       for (let sec = 1; sec <= stepCount; sec++) {
         timeSeries.push({
           t: sec,
@@ -252,25 +234,42 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
         })
       }
 
+      const errorRate = totalRequests > 0 ? Math.round((totalErrors / totalRequests) * 10000) / 100 : 0
+      const dataTransferred = raw.summary?.totalData ?? (throughput * actualDurationSec)
+      const summary = {
+        avgRps: rps,
+        peakRps: rps,
+        minRps: rps,
+        avgThroughput: throughput,
+        peakThroughput: throughput,
+        latencyJitter: p99 - p50
+      }
+
       const result: TestResult = {
         runId,
         engine: 'oha',
         startedAt: new Date(startedAt).toISOString(),
         finishedAt,
-        durationSec,
+        durationSec: actualDurationSec,
         requests: totalRequests,
         requestsPerSecond: rps,
         throughput,
         latency: {
+          min: p50,
+          max: p99,
           average: avgLat,
           p50,
           p90,
           p95,
-          p99
+          p99,
+          stddev: 0
         },
         errors: totalErrors,
+        errorRate,
         timeouts: timeoutErrors,
         statusCodes,
+        dataTransferred,
+        summary,
         timeSeries
       }
 
@@ -288,7 +287,6 @@ export function stop(runId: number): void {
   const active = activeProcesses.get(runId)
   if (!active) return
 
-  clearInterval(active.timer)
   if (active.child.pid) {
     if (process.platform === 'win32') {
       spawn('taskkill', ['/pid', active.child.pid.toString(), '/T', '/F'])

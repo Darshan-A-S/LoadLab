@@ -6,6 +6,7 @@ export function renderJSON(result: TestResult): string {
 
 export function renderCSV(result: TestResult): string {
   const r = result
+  const s = r.summary
   const header = [
     'runId',
     'startedAt',
@@ -15,12 +16,23 @@ export function renderCSV(result: TestResult): string {
     'requestsPerSecond',
     'throughput',
     'avgLatencyMs',
+    'minLatencyMs',
+    'maxLatencyMs',
+    'stddevLatencyMs',
     'p50Ms',
     'p90Ms',
     'p95Ms',
     'p99Ms',
     'errors',
+    'errorRate',
     'timeouts',
+    'dataTransferred',
+    'avgRps',
+    'peakRps',
+    'minRps',
+    'avgThroughput',
+    'peakThroughput',
+    'latencyJitter',
     'statusCodes'
   ]
   const cells = [
@@ -32,12 +44,23 @@ export function renderCSV(result: TestResult): string {
     r.requestsPerSecond,
     r.throughput,
     r.latency.average,
+    r.latency.min,
+    r.latency.max,
+    r.latency.stddev,
     r.latency.p50,
     r.latency.p90,
     r.latency.p95,
     r.latency.p99,
     r.errors,
+    r.errorRate,
     r.timeouts,
+    r.dataTransferred,
+    s?.avgRps ?? 0,
+    s?.peakRps ?? 0,
+    s?.minRps ?? 0,
+    s?.avgThroughput ?? 0,
+    s?.peakThroughput ?? 0,
+    s?.latencyJitter ?? 0,
     Object.entries(r.statusCodes ?? {})
       .map(([c, n]) => `${c}:${n}`)
       .join(' ')

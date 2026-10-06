@@ -1,6 +1,5 @@
 import * as autocannon from './engine/autocannon'
 import * as loadtest from './engine/loadtest'
-import * as artillery from './engine/artillery'
 import * as oha from './engine/oha'
 import * as bombardier from './engine/bombardier'
 import { insertRun, updateRunDone, updateRunStatus } from './db'
@@ -32,7 +31,6 @@ export interface EngineAdapter {
 const ENGINES: Record<EngineType, EngineAdapter> = {
   autocannon,
   loadtest,
-  artillery,
   oha,
   bombardier
 }

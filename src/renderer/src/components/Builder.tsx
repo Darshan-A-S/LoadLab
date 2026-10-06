@@ -17,7 +17,7 @@ interface Props {
   draft: TestDefinition
   onChange: (d: TestDefinition | ((prev: TestDefinition) => TestDefinition)) => void
   error: string | null
-  onStarted: (runId: number) => void
+  onStarted: (runId: number, def?: TestDefinition) => void
   onError: (msg: string | null) => void
   onSave: () => void
 }
@@ -80,7 +80,7 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
     try {
       const runDraft = { ...draft, name: draft.name.trim() || 'Untitled Test' }
       const runId = await window.loadlab.runs.start(runDraft)
-      onStarted(runId)
+      onStarted(runId, runDraft)
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e))
     } finally {

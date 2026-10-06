@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, ChevronsRight, Ellipsis, FolderDown, Search } from 'lucide-react'
+import { ChevronRight, ChevronsRight, Ellipsis, FolderDown, Search, ArrowLeftRight } from 'lucide-react'
 import CollectionTabs from './CollectionTabs'
 import type { Scenario, HistoryEntry, Collection as Coll, RunStatus } from '@shared/types'
 
@@ -10,6 +10,7 @@ interface Props {
   onOpenScenario: (s: Scenario) => void
   onDeleteScenario: (id: number) => void
   onOpenHistory: (run: HistoryEntry) => void
+  onCompareRun?: (run: HistoryEntry) => void
   onNewInCollection: (collectionId: number) => void
   onNewCollection: () => void
   onRenameCollection: (c: Coll) => void
@@ -28,6 +29,7 @@ export default function Collection({
   onOpenScenario,
   onDeleteScenario,
   onOpenHistory,
+  onCompareRun,
   onNewInCollection,
   onNewCollection,
   onRenameCollection,
@@ -166,7 +168,21 @@ export default function Collection({
           {runs.map((r) => (
             <div key={r.runId} className="collection-item" onClick={() => onOpenHistory(r)}>
               <span className="collection-item-name">{r.name}</span>
-              <span className={`badge ${dotClass(r.status)}`} />
+              <div className="collection-item-side">
+                {r.status === 'completed' && r.result !== null && onCompareRun && (
+                  <button
+                    className="collection-item-action compare-action"
+                    title="Compare this run"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCompareRun(r)
+                    }}
+                  >
+                    <ArrowLeftRight size={12} />
+                  </button>
+                )}
+                <span className={`badge ${dotClass(r.status)}`} />
+              </div>
             </div>
           ))}
         </div>

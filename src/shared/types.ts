@@ -1,5 +1,5 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-export type EngineType = 'autocannon' | 'loadtest' | 'artillery' | 'oha' | 'bombardier'
+export type EngineType = 'autocannon' | 'loadtest' | 'oha' | 'bombardier'
 
 export interface AuthConfig {
   type: 'none' | 'bearer' | 'basic'
@@ -37,12 +37,6 @@ export const ENGINE_DEFAULTS: Record<EngineType, TestDefinition['load']> = {
   loadtest: {
     connections: 25,
     durationSeconds: 20,
-    pipelining: 1,
-    rate: undefined
-  },
-  artillery: {
-    connections: 20,
-    durationSeconds: 30,
     pipelining: 1,
     rate: undefined
   },
@@ -95,16 +89,33 @@ export interface TestResult {
   throughput: number
   latency: {
     average: number
+    min: number
+    max: number
+    stddev: number
     p50: number
     p90: number
     p95: number
     p99: number
   }
+  /** error rate as a percentage (0–100) */
+  errorRate: number
+  /** total bytes transferred during the test */
+  dataTransferred: number
   errors: number
   timeouts: number
   /** exact status code -> count, e.g. { "200": 160000, "401": 4000 } */
   statusCodes: Record<string, number>
   timeSeries: TimeSeriesSample[]
+  /** computed aggregate metrics derived from timeSeries */
+  summary: {
+    avgRps: number
+    peakRps: number
+    minRps: number
+    avgThroughput: number
+    peakThroughput: number
+    /** p99 - p50 latency spread */
+    latencyJitter: number
+  }
 }
 
 export interface Collection {

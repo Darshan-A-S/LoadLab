@@ -17,7 +17,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "artillery": "^2.0.34",
     "autocannon": "^7.15.0",
     "loadtest": "^8.2.1"
   },

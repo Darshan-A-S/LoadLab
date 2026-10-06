@@ -859,7 +859,6 @@ export default function RequestEditor({
                 >
                   <option value="autocannon">Autocannon (Default)</option>
                   <option value="loadtest">loadtest (ab-compatible)</option>
-                  <option value="artillery">Artillery (Scenario Runner)</option>
                   <option value="oha">oha (Rust / Hyper / HTTP/2)</option>
                   <option value="bombardier">Bombardier (Go / FastHTTP)</option>
                 </select>

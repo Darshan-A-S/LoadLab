@@ -10,9 +10,22 @@ export function fmtBytes(bytes: number): string {
   return `${Math.round(bytes)} B/s`
 }
 
+export function fmtTotalBytes(bytes: number): string {
+  if (!Number.isFinite(bytes)) return '—'
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${Math.round(bytes)} B`
+}
+
 export function fmtNum(n: number): string {
   if (!Number.isFinite(n)) return '—'
   return n.toLocaleString('en-US')
+}
+
+export function fmtPct(pct: number): string {
+  if (!Number.isFinite(pct)) return '—'
+  return `${pct.toFixed(2)}%`
 }
 
 export function fmtTime(iso: string | null): string {

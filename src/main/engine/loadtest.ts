@@ -190,13 +190,30 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     const p95 = raw.percentiles?.['95'] ? Math.round(raw.percentiles['95']) : percentile(sorted, 0.95)
     const p99 = raw.percentiles?.['99'] ? Math.round(raw.percentiles['99']) : percentile(sorted, 0.99)
 
+    const minLatency = sorted.length > 0 ? Math.min(...sorted) : 0
+    const maxLatency = sorted.length > 0 ? Math.max(...sorted) : 0
+    const stddev = sorted.length > 0 ? Math.round(Math.sqrt(sorted.reduce((sum, v) => sum + (v - avgLatency) ** 2, 0) / sorted.length)) : 0
+
+    const reqCount = raw.totalRequests ?? totalRequests
+    const errCount = raw.totalErrors ?? totalErrors
+    const errorRate = reqCount > 0 ? Math.round((errCount / reqCount) * 10000) / 100 : 0
+
+    const rpsSamples = samples.map(s => s.rps)
+    const tpSamples = samples.map(s => s.throughput)
+    const avgRps = rpsSamples.length > 0 ? Math.round(rpsSamples.reduce((a, b) => a + b, 0) / rpsSamples.length) : 0
+    const peakRps = rpsSamples.length > 0 ? Math.max(...rpsSamples) : 0
+    const minRps = rpsSamples.length > 0 ? Math.min(...rpsSamples) : 0
+    const avgThroughput = tpSamples.length > 0 ? Math.round(tpSamples.reduce((a, b) => a + b, 0) / tpSamples.length) : 0
+    const peakThroughput = tpSamples.length > 0 ? Math.max(...tpSamples) : 0
+    const latencyJitter = (p99 || avgLatency) - (p50 || avgLatency)
+
     const finalResult: TestResult = {
       runId,
       engine: 'loadtest',
       startedAt: new Date(startedAt).toISOString(),
       finishedAt,
       durationSec: testDuration,
-      requests: raw.totalRequests ?? totalRequests,
+      requests: reqCount,
       requestsPerSecond: Math.round(raw.rps ?? (testDuration > 0 ? totalRequests / testDuration : totalRequests)),
       throughput: testDuration > 0 ? Math.round(totalBytes / testDuration) : 0,
       latency: {
@@ -204,11 +221,24 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
         p50: p50 || avgLatency,
         p90: p90 || avgLatency,
         p95: p95 || avgLatency,
-        p99: p99 || avgLatency
+        p99: p99 || avgLatency,
+        min: minLatency,
+        max: maxLatency,
+        stddev: stddev
       },
-      errors: raw.totalErrors ?? totalErrors,
+      errors: errCount,
+      errorRate,
+      dataTransferred: totalBytes,
       timeouts: 0,
       statusCodes,
+      summary: {
+        avgRps,
+        peakRps,
+        minRps,
+        avgThroughput,
+        peakThroughput,
+        latencyJitter
+      },
       timeSeries: samples
     }
 

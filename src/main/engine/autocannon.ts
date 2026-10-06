@@ -178,8 +178,8 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     const r = raw as {
       duration?: number
       requests?: { total?: number; average?: number; sent?: number }
-      throughput?: { average?: number }
-      latency?: { average?: number; p50?: number; p90?: number; p95?: number; p99?: number }
+      throughput?: { average?: number; total?: number }
+      latency?: { average?: number; p50?: number; p90?: number; p95?: number; p99?: number; min?: number; max?: number }
       errors?: number
       timeouts?: number
       non2xx?: number
@@ -197,6 +197,25 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     // Optional chaining (?.) and nullish coalescing (??) ensure safe fallback if r.latency is undefined:
     const avgLat = final.latency || Math.round(r.latency?.average ?? 0)
 
+    const requests = r.requests?.total ?? state.totalRequests
+    const errors = (r.non2xx ?? 0) + (r.errors ?? 0)
+    const errorRate = requests > 0 ? Math.round((errors / requests) * 10000) / 100 : 0
+    const dataTransferred = r.throughput?.total ?? 0
+
+    const rpsArr = state.samples.map(s => s.rps)
+    const tpArr = state.samples.map(s => s.throughput)
+    const summary = {
+      avgRps: rpsArr.length ? rpsArr.reduce((a, b) => a + b, 0) / rpsArr.length : 0,
+      peakRps: rpsArr.length ? Math.max(...rpsArr) : 0,
+      minRps: rpsArr.length ? Math.min(...rpsArr) : 0,
+      avgThroughput: tpArr.length ? tpArr.reduce((a, b) => a + b, 0) / tpArr.length : 0,
+      peakThroughput: tpArr.length ? Math.max(...tpArr) : 0,
+      latencyJitter: Math.round((r.latency?.p99 ?? 0) - (r.latency?.p50 ?? 0))
+    }
+
+    const mean = state.reservoir.length ? state.reservoir.reduce((a, b) => a + b, 0) / state.reservoir.length : 0
+    const stddev = state.reservoir.length ? Math.sqrt(state.reservoir.reduce((sum, v) => sum + (v - mean) ** 2, 0) / state.reservoir.length) : 0
+
     // Build the final comprehensive TestResult object and send it to onDone:
     cb.onDone(null, {
       runId,
@@ -204,7 +223,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
       startedAt: new Date(startedAt).toISOString(),
       finishedAt: new Date().toISOString(),
       durationSec: r.duration ? Math.round(r.duration) : config.load.durationSeconds,
-      requests: r.requests?.total ?? state.totalRequests,
+      requests,
       requestsPerSecond: Math.round(r.requests?.average ?? 0),
       throughput: r.throughput?.average ?? 0,
       latency: {
@@ -212,12 +231,18 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
         p50: Math.round(r.latency?.p50 ?? 0) || avgLat,
         p90: Math.round(r.latency?.p90 ?? 0) || avgLat,
         p95: Math.round(r.latency?.p95 ?? r.latency?.p90 ?? 0) || avgLat,
-        p99: Math.round(r.latency?.p99 ?? 0) || avgLat
+        p99: Math.round(r.latency?.p99 ?? 0) || avgLat,
+        min: r.latency?.min ?? 0,
+        max: r.latency?.max ?? 0,
+        stddev
       },
-      errors: (r.non2xx ?? 0) + (r.errors ?? 0),
+      errors,
       timeouts: r.timeouts ?? 0,
       statusCodes,
-      timeSeries: state.samples // Full array of samples recorded throughout the test
+      timeSeries: state.samples, // Full array of samples recorded throughout the test
+      errorRate,
+      dataTransferred,
+      summary
     })
   })
 

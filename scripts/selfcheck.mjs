@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import * as autocannon from '../src/main/engine/autocannon.ts'
 import * as loadtest from '../src/main/engine/loadtest.ts'
-import * as artillery from '../src/main/engine/artillery.ts'
 import * as oha from '../src/main/engine/oha.ts'
 import * as bombardier from '../src/main/engine/bombardier.ts'
 
@@ -20,7 +19,6 @@ const port = server.address().port
 const engines = [
   { name: 'autocannon', adapter: autocannon },
   { name: 'loadtest', adapter: loadtest },
-  { name: 'artillery', adapter: artillery },
   { name: 'oha', adapter: oha },
   { name: 'bombardier', adapter: bombardier }
 ]

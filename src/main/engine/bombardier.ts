@@ -40,7 +40,6 @@ export interface EngineStartCallbacks {
 
 interface ActiveProcess {
   child: ChildProcess
-  timer: NodeJS.Timeout
 }
 
 const activeProcesses = new Map<number, ActiveProcess>()
@@ -95,10 +94,12 @@ interface BombardierOutput {
 export function start(config: TestDefinition, runId: number, cb: EngineStartCallbacks): void {
   const binPath = findBinary('bombardier')
   const startedAt = Date.now()
+  const durationSec = Math.max(1, Math.round(Number(config.load.durationSeconds) || 15))
+  const connections = Math.max(1, Math.round(Number(config.load.connections) || 10))
 
   const args: string[] = [
-    '-d', `${config.load.durationSeconds}s`,
-    '-c', String(config.load.connections),
+    '-d', `${durationSec}s`,
+    '-c', String(connections),
     '-m', config.target.method,
     '-l', // Collect latency statistics
     '-p', 'r', // Print result only
@@ -147,24 +148,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     return
   }
 
-  const samples: TimeSeriesSample[] = []
-
-  const timer = setInterval(() => {
-    const elapsedSec = Math.round((Date.now() - startedAt) / 1000)
-    const sample: TimeSeriesSample = {
-      t: elapsedSec,
-      rps: 0,
-      latency: 0,
-      errors: 0,
-      throughput: 0,
-      totalRequests: 0,
-      totalErrors: 0
-    }
-    samples.push(sample)
-    cb.onSample(sample)
-  }, 1000)
-
-  activeProcesses.set(runId, { child, timer })
+  activeProcesses.set(runId, { child })
 
   child.stdout?.on('data', (chunk: Buffer) => {
     stdout += chunk.toString('utf8')
@@ -175,13 +159,11 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
   })
 
   child.on('error', (err) => {
-    clearInterval(timer)
     activeProcesses.delete(runId)
     cb.onDone(err, null as unknown as TestResult)
   })
 
   child.on('close', (code) => {
-    clearInterval(timer)
     activeProcesses.delete(runId)
 
     if (code !== 0 && !stdout.trim()) {
@@ -192,7 +174,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     try {
       const raw = JSON.parse(stdout) as BombardierOutput
       const finishedAt = new Date().toISOString()
-      const durationSec = raw.result?.timeTakenSeconds ? Math.round(raw.result.timeTakenSeconds) : config.load.durationSeconds
+      const actualDurationSec = raw.result?.timeTakenSeconds ? Math.round(raw.result.timeTakenSeconds) : durationSec
 
       const totalRequests =
         (raw.result?.req1xx ?? 0) +
@@ -229,9 +211,15 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
           ? Math.round(raw.result.bytesRead / raw.result.timeTakenSeconds)
           : 0
 
+      const minLat = Math.round((raw.result?.latency?.percentiles?.['0'] ?? meanUs) / 1000) || p50
+      const maxLat = Math.round((raw.result?.latency?.max ?? meanUs) / 1000)
+      const stddevLat = Math.round((raw.result?.latency?.stddev ?? 0) / 1000)
+      const errorRate = totalRequests > 0 ? Math.round((errors / totalRequests) * 10000) / 100 : 0
+      const dataTransferred = raw.result?.bytesRead ?? 0
+
       // Synthesize timeline samples for charts
       const timeSeries: TimeSeriesSample[] = []
-      const stepCount = Math.max(1, durationSec)
+      const stepCount = Math.max(1, actualDurationSec)
       for (let sec = 1; sec <= stepCount; sec++) {
         timeSeries.push({
           t: sec,
@@ -249,21 +237,34 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
         engine: 'bombardier',
         startedAt: new Date(startedAt).toISOString(),
         finishedAt,
-        durationSec,
+        durationSec: actualDurationSec,
         requests: totalRequests,
         requestsPerSecond: rps,
         throughput,
+        errorRate,
+        dataTransferred,
         latency: {
+          min: minLat,
+          max: maxLat,
           average: avgLat,
           p50,
           p90,
           p95,
-          p99
+          p99,
+          stddev: stddevLat
         },
         errors,
         timeouts: 0,
         statusCodes,
-        timeSeries
+        timeSeries,
+        summary: {
+          avgRps: rps,
+          peakRps: rps,
+          minRps: rps,
+          avgThroughput: throughput,
+          peakThroughput: throughput,
+          latencyJitter: p99 - p50
+        }
       }
 
       cb.onDone(null, result)
@@ -280,7 +281,6 @@ export function stop(runId: number): void {
   const active = activeProcesses.get(runId)
   if (!active) return
 
-  clearInterval(active.timer)
   if (active.child.pid) {
     if (process.platform === 'win32') {
       spawn('taskkill', ['/pid', active.child.pid.toString(), '/T', '/F'])
