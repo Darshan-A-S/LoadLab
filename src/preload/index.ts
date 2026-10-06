@@ -16,7 +16,8 @@ const loadlab = {
     list: (): Promise<Scenario[]> => ipcRenderer.invoke('scenarios:list'),
     save: (test: TestDefinition, collectionId: number | null): Promise<{ id: number }> =>
       ipcRenderer.invoke('scenarios:save', test, collectionId),
-    delete: (id: number): Promise<void> => ipcRenderer.invoke('scenarios:delete', id)
+    delete: (id: number): Promise<void> => ipcRenderer.invoke('scenarios:delete', id),
+    updateTags: (id: number, tags: string[]): Promise<void> => ipcRenderer.invoke('scenarios:updateTags', id, tags)
   },
   collections: {
     list: (): Promise<Collection[]> => ipcRenderer.invoke('collections:list'),
@@ -34,7 +35,8 @@ const loadlab = {
     stop: (runId: number): Promise<void> => ipcRenderer.invoke('runs:stop', runId),
     active: (): Promise<number[]> => ipcRenderer.invoke('runs:active'),
     export: (runId: number, format: 'json' | 'csv'): Promise<string | null> =>
-      ipcRenderer.invoke('runs:export', runId, format)
+      ipcRenderer.invoke('runs:export', runId, format),
+    updateTags: (runId: number, tags: string[]): Promise<void> => ipcRenderer.invoke('runs:updateTags', runId, tags)
   },
   onRunEvent: (cb: (ev: RunEvent) => void): (() => void) => {
     const listener = (_e: unknown, ev: RunEvent): void => cb(ev)

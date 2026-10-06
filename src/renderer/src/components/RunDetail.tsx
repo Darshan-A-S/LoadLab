@@ -1,18 +1,39 @@
+import { useState, useEffect } from 'react'
 import { fmtNum, fmtMs, fmtBytes, fmtPct, fmtTotalBytes } from '../format'
 import type { HistoryEntry } from '@shared/types'
+import TagSelector from './TagSelector'
 
 export default function RunDetail({
   run,
-  onCompare
+  onCompare,
+  onTagsChange
 }: {
   run: HistoryEntry
   onCompare?: (run: HistoryEntry) => void
+  onTagsChange?: (tags: string[]) => void
 }): JSX.Element {
+  const [tags, setTags] = useState<string[]>(run.tags || [])
+
+  useEffect(() => {
+    setTags(run.tags || [])
+  }, [run.tags])
+
+  const handleTagsChange = (newTags: string[]): void => {
+    setTags(newTags)
+    if (run.runId) {
+      void window.loadlab.runs.updateTags(run.runId, newTags)
+    }
+    onTagsChange?.(newTags)
+  }
+
   const r = run.result
   if (!r) {
     return (
       <div>
-        <h2>{run.name}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <h2 style={{ margin: 0 }}>{run.name}</h2>
+          <TagSelector tags={tags} onChange={handleTagsChange} />
+        </div>
         <p className="muted" style={{ wordBreak: 'break-all' }}>
           {run.target}
         </p>
@@ -24,9 +45,12 @@ export default function RunDetail({
   const s = r.summary
   return (
     <div>
-      <h2>
-        {run.name} <span className="muted">(#{run.runId})</span>
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <h2 style={{ margin: 0 }}>
+          {run.name} <span className="muted">(#{run.runId})</span>
+        </h2>
+        <TagSelector tags={tags} onChange={handleTagsChange} />
+      </div>
       <p className="muted" style={{ wordBreak: 'break-all' }}>
         {run.target}
       </p>

@@ -22,6 +22,7 @@ import {
 } from 'recharts'
 import { fmtNum, fmtMs, fmtBytes, fmtPct, fmtTotalBytes, fmtTime } from '../format'
 import type { HistoryEntry, TestResult } from '@shared/types'
+import TagBadge from './TagBadge'
 
 interface Props {
   runA: HistoryEntry
@@ -351,11 +352,13 @@ export default function CompareRuns({
   const generateMarkdownReport = (): string => {
     const lines: string[] = []
     lines.push(`# LoadLab Comparison Report`)
+    const tagsA = runA.tags && runA.tags.length ? ` [Tags: ${runA.tags.join(', ')}]` : ''
+    const tagsB = runB.tags && runB.tags.length ? ` [Tags: ${runB.tags.join(', ')}]` : ''
     lines.push(
-      `**Baseline (A)**: ${runA.name} (#${runA.runId}) - ${runA.target} (${runA.engine})`
+      `**Baseline (A)**: ${runA.name} (#${runA.runId}) - ${runA.target} (${runA.engine})${tagsA}`
     )
     lines.push(
-      `**Target (B)**: ${runB.name} (#${runB.runId}) - ${runB.target} (${runB.engine})`
+      `**Target (B)**: ${runB.name} (#${runB.runId}) - ${runB.target} (${runB.engine})${tagsB}`
     )
     lines.push(`**Generated**: ${new Date().toLocaleString()}`)
     lines.push('')
@@ -460,7 +463,16 @@ export default function CompareRuns({
         {/* Configurations Header Card */}
         <div className="compare-configs-grid">
           <div className="compare-config-box baseline-box">
-            <div className="config-box-tag">Baseline (A)</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              <div className="config-box-tag">Baseline (A)</div>
+              {runA.tags && runA.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {runA.tags.map((t) => (
+                    <TagBadge key={t} tag={t} size="sm" />
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="config-run-select">
               <select
                 value={runA.runId}
@@ -495,7 +507,16 @@ export default function CompareRuns({
           </div>
 
           <div className="compare-config-box target-box">
-            <div className="config-box-tag">Target / Candidate (B)</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              <div className="config-box-tag">Target / Candidate (B)</div>
+              {runB.tags && runB.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {runB.tags.map((t) => (
+                    <TagBadge key={t} tag={t} size="sm" />
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="config-run-select">
               <select
                 value={runB.runId}

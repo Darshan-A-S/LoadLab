@@ -20,7 +20,8 @@ export function initDb(): void {
       name TEXT NOT NULL,
       config TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      collection_id INTEGER
+      collection_id INTEGER,
+      tags TEXT
     );
     CREATE TABLE IF NOT EXISTS runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,21 +34,40 @@ export function initDb(): void {
       finished_at TEXT,
       error TEXT,
       result TEXT,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      tags TEXT
     )
   `)
   migrate()
 }
 
 function migrate(): void {
-  const cols = db.prepare('PRAGMA table_info(scenarios)').all() as { name: string }[]
-  if (!cols.some((c) => c.name === 'collection_id')) {
+  const scenCols = db.prepare('PRAGMA table_info(scenarios)').all() as { name: string }[]
+  if (!scenCols.some((c) => c.name === 'collection_id')) {
     db.exec('ALTER TABLE scenarios ADD COLUMN collection_id INTEGER')
+  }
+  if (!scenCols.some((c) => c.name === 'tags')) {
+    db.exec('ALTER TABLE scenarios ADD COLUMN tags TEXT')
+  }
+  const runCols = db.prepare('PRAGMA table_info(runs)').all() as { name: string }[]
+  if (!runCols.some((c) => c.name === 'tags')) {
+    db.exec('ALTER TABLE runs ADD COLUMN tags TEXT')
   }
   db.prepare('UPDATE scenarios SET collection_id = ? WHERE collection_id IS NULL').run(defaultCollectionId())
 }
 
 function parseRow(row: Record<string, unknown>): HistoryEntry {
+  let tags: string[] = []
+  if (typeof row.tags === 'string' && row.tags.trim()) {
+    try {
+      const parsed = JSON.parse(row.tags)
+      if (Array.isArray(parsed)) tags = parsed
+    } catch {}
+  }
+  const result = row.result ? (JSON.parse(row.result as string) as TestResult) : null
+  if (result && tags.length && !result.tags) {
+    result.tags = tags
+  }
   return {
     runId: row.id as number,
     name: row.name as string,
@@ -56,7 +76,8 @@ function parseRow(row: Record<string, unknown>): HistoryEntry {
     status: row.status as HistoryEntry['status'],
     startedAt: row.started_at as string,
     finishedAt: (row.finished_at as string | null) ?? null,
-    result: row.result ? (JSON.parse(row.result as string) as TestResult) : null
+    result,
+    tags
   }
 }
 
@@ -68,9 +89,10 @@ function defaultCollectionId(): number {
 
 export function insertScenario(test: TestDefinition, collectionId: number | null): number {
   const now = new Date().toISOString()
+  const tagsStr = test.tags && test.tags.length ? JSON.stringify(test.tags) : null
   const res = db
-    .prepare('INSERT INTO scenarios (name, config, created_at, collection_id) VALUES (?, ?, ?, ?)')
-    .run(test.name, JSON.stringify(test), now, collectionId ?? defaultCollectionId())
+    .prepare('INSERT INTO scenarios (name, config, created_at, collection_id, tags) VALUES (?, ?, ?, ?, ?)')
+    .run(test.name, JSON.stringify(test), now, collectionId ?? defaultCollectionId(), tagsStr)
   return Number(res.lastInsertRowid)
 }
 
@@ -100,7 +122,7 @@ export function duplicateCollection(id: number): number {
     .run(now, id)
   const newId = Number(res.lastInsertRowid)
   db.prepare(
-    'INSERT INTO scenarios (name, config, created_at, collection_id) SELECT name, config, created_at, ? FROM scenarios WHERE collection_id = ?'
+    'INSERT INTO scenarios (name, config, created_at, collection_id, tags) SELECT name, config, created_at, ?, tags FROM scenarios WHERE collection_id = ?'
   ).run(newId, id)
   return newId
 }
@@ -117,41 +139,68 @@ export function importCollection(name: string, configs: TestDefinition[]): numbe
 }
 
 export function listScenarios(): Scenario[] {
-  const rows = db.prepare('SELECT id, name, config, created_at, collection_id FROM scenarios ORDER BY id DESC').all() as {
+  const rows = db.prepare('SELECT id, name, config, created_at, collection_id, tags FROM scenarios ORDER BY id DESC').all() as {
     id: number
     name: string
     config: string
     created_at: string
     collection_id: number | null
+    tags?: string | null
   }[]
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    config: JSON.parse(r.config),
-    createdAt: r.created_at,
-    collectionId: r.collection_id
-  }))
+  return rows.map((r) => {
+    let tags: string[] = []
+    if (r.tags && r.tags.trim()) {
+      try {
+        const p = JSON.parse(r.tags)
+        if (Array.isArray(p)) tags = p
+      } catch {}
+    }
+    const config = JSON.parse(r.config) as TestDefinition
+    if (tags.length && !config.tags) config.tags = tags
+    return {
+      id: r.id,
+      name: r.name,
+      config,
+      createdAt: r.created_at,
+      collectionId: r.collection_id,
+      tags
+    }
+  })
 }
 
 export function deleteScenario(id: number): void {
   db.prepare('DELETE FROM scenarios WHERE id = ?').run(id)
 }
 
+export function updateScenarioTags(id: number, tags: string[]): void {
+  const tagsStr = tags && tags.length ? JSON.stringify(tags) : null
+  db.prepare('UPDATE scenarios SET tags = ? WHERE id = ?').run(tagsStr, id)
+  const row = db.prepare('SELECT config FROM scenarios WHERE id = ?').get(id) as { config: string } | undefined
+  if (row) {
+    try {
+      const cfg = JSON.parse(row.config) as TestDefinition
+      cfg.tags = tags
+      db.prepare('UPDATE scenarios SET config = ? WHERE id = ?').run(JSON.stringify(cfg), id)
+    } catch {}
+  }
+}
+
 export function insertRun(
-  run: Omit<HistoryEntry, 'runId' | 'result' | 'finishedAt'> & { scenarioId?: number }
+  run: Omit<HistoryEntry, 'runId' | 'result' | 'finishedAt'> & { scenarioId?: number; tags?: string[] }
 ): number {
+  const tagsStr = run.tags && run.tags.length ? JSON.stringify(run.tags) : null
   const res = db
     .prepare(
-      'INSERT INTO runs (scenario_id, name, target, engine, status, started_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO runs (scenario_id, name, target, engine, status, started_at, created_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(run.scenarioId ?? null, run.name, run.target, run.engine, run.status, run.startedAt, run.startedAt)
+    .run(run.scenarioId ?? null, run.name, run.target, run.engine, run.status, run.startedAt, run.startedAt, tagsStr)
   return Number(res.lastInsertRowid)
 }
 
 export function listRuns(limit = 50): HistoryEntry[] {
   const rows = db
     .prepare(
-      'SELECT id, name, target, engine, status, started_at, finished_at, result FROM runs ORDER BY id DESC LIMIT ?'
+      'SELECT id, name, target, engine, status, started_at, finished_at, result, tags FROM runs ORDER BY id DESC LIMIT ?'
     )
     .all(limit) as Record<string, unknown>[]
   return rows.map(parseRow)
@@ -174,4 +223,9 @@ export function updateRunDone(
 
 export function updateRunStatus(runId: number, status: HistoryEntry['status']): void {
   db.prepare('UPDATE runs SET status = ? WHERE id = ?').run(status, runId)
+}
+
+export function updateRunTags(runId: number, tags: string[]): void {
+  const tagsStr = tags && tags.length ? JSON.stringify(tags) : null
+  db.prepare('UPDATE runs SET tags = ? WHERE id = ?').run(tagsStr, runId)
 }

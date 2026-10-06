@@ -9,6 +9,7 @@ declare global {
         list: () => Promise<Scenario[]>
         save: (test: TestDefinition, collectionId: number | null) => Promise<{ id: number }>
         delete: (id: number) => Promise<void>
+        updateTags: (id: number, tags: string[]) => Promise<void>
       }
       collections: {
         list: () => Promise<Collection[]>
@@ -25,6 +26,7 @@ declare global {
         stop: (runId: number) => Promise<void>
         active: () => Promise<number[]>
         export: (runId: number, format: 'json' | 'csv') => Promise<string | null>
+        updateTags: (runId: number, tags: string[]) => Promise<void>
       }
       onRunEvent: (cb: (ev: RunEvent) => void) => () => void
       win: {

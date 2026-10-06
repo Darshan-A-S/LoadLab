@@ -98,13 +98,6 @@ export default function Dashboard({
               <span>{totalDuration}s</span>
             </div>
           </div>
-
-          <div className="batch-info-box">
-            <div className="batch-info-icon">⚡</div>
-            <div className="batch-info-text">
-              <strong>Native Engine Execution:</strong> {engine} is executing at maximum throughput using native multithreaded sockets. Complete latency percentiles, error rates, and charts will appear immediately upon test completion.
-            </div>
-          </div>
         </div>
       ) : (
         <div className="card">

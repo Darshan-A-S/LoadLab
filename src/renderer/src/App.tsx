@@ -178,6 +178,9 @@ export default function App(): JSX.Element {
     }
     const id = nextTabId++
     const draft = structuredClone(s.config)
+    if (s.tags && (!draft.tags || draft.tags.length === 0)) {
+      draft.tags = [...s.tags]
+    }
     setTabs((ts) => [
       ...ts,
       { kind: 'editor', id, savedId: s.id, collectionId: s.collectionId, draft, base: JSON.stringify(draft), running: null, result: null, error: null }
@@ -560,7 +563,15 @@ export default function App(): JSX.Element {
                 </button>
               </div>
             ) : activeTab.kind === 'run' ? (
-              <RunDetail run={activeTab.run} />
+              <RunDetail
+                run={activeTab.run}
+                onTagsChange={(tags) => {
+                  setTabs((ts) =>
+                    ts.map((t) => (t.id === activeTab.id && t.kind === 'run' ? { ...t, run: { ...t.run, tags } } : t))
+                  )
+                  refreshHistory()
+                }}
+              />
             ) : activeTab.running ? (
               <Dashboard
                 runId={activeTab.running.runId}
@@ -697,6 +708,10 @@ export default function App(): JSX.Element {
               status={resultPopup.status}
               onRunAgain={runAgain}
               onCompare={handleResultPopupCompare}
+              onTagsChange={(tags) => {
+                setResultPopup((prev) => (prev ? { ...prev, result: { ...prev.result, tags } } : null))
+                refreshHistory()
+              }}
             />
             <div className="actions">
               <button onClick={() => setResultPopup(null)}>Close</button>
@@ -711,6 +726,10 @@ export default function App(): JSX.Element {
             <RunDetail
               run={detailRun}
               onCompare={(run) => startCompare(run)}
+              onTagsChange={(tags) => {
+                setDetailRun((prev) => (prev ? { ...prev, tags } : null))
+                refreshHistory()
+              }}
             />
             <div className="actions">
               <button className="primary" onClick={() => setDetailRun(null)}>Close</button>

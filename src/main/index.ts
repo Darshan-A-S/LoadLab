@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { initDb, insertScenario, listScenarios, deleteScenario, listRuns, listCollections, createCollection, renameCollection, duplicateCollection, deleteCollection, importCollection } from './db'
+import { initDb, insertScenario, listScenarios, deleteScenario, updateScenarioTags, listRuns, updateRunTags, listCollections, createCollection, renameCollection, duplicateCollection, deleteCollection, importCollection } from './db'
 import { startTest, stopTest, activeRunIds } from './runner'
 import { renderJSON, renderCSV } from './export'
 import { validate } from '../shared/validation'
@@ -96,6 +96,9 @@ app.whenReady().then(() => {
   ipcMain.handle('scenarios:delete', (_e, id: number) => {
     deleteScenario(id)
   })
+  ipcMain.handle('scenarios:updateTags', (_e, id: number, tags: string[]) => {
+    updateScenarioTags(id, tags)
+  })
   ipcMain.handle('collections:list', () => listCollections())
   ipcMain.handle('collections:create', (_e, name: string) => ({
     id: createCollection(name)
@@ -171,6 +174,9 @@ app.whenReady().then(() => {
     if (canceled || !filePath) return null
     await writeFile(filePath, format === 'csv' ? renderCSV(run.result) : renderJSON(run.result), 'utf8')
     return filePath
+  })
+  ipcMain.handle('runs:updateTags', (_e, runId: number, tags: string[]) => {
+    updateRunTags(runId, tags)
   })
 
   createWindow()

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ChevronRight, ChevronsRight, Ellipsis, FolderDown, Search, ArrowLeftRight } from 'lucide-react'
+import { ChevronRight, ChevronsRight, Ellipsis, FolderDown, Search, ArrowLeftRight, Plus } from 'lucide-react'
 import CollectionTabs from './CollectionTabs'
+import TagBadge from './TagBadge'
 import type { Scenario, HistoryEntry, Collection as Coll, RunStatus } from '@shared/types'
 
 interface Props {
@@ -53,8 +54,16 @@ export default function Collection({
   }
 
   const q = query.trim().toLowerCase()
-  const saved = q ? scenarios.filter((s) => s.name.toLowerCase().includes(q)) : scenarios
-  const runs = q ? history.filter((r) => r.name.toLowerCase().includes(q)) : history
+  const saved = q
+    ? scenarios.filter(
+        (s) => s.name.toLowerCase().includes(q) || s.tags?.some((t) => t.toLowerCase().includes(q))
+      )
+    : scenarios
+  const runs = q
+    ? history.filter(
+        (r) => r.name.toLowerCase().includes(q) || r.tags?.some((t) => t.toLowerCase().includes(q))
+      )
+    : history
 
   const grouped = collections
     .map((c) => ({
@@ -96,7 +105,7 @@ export default function Collection({
               Collections
             </button>
             <button className="collection-head-add collection-collapse-add" title="New Collection" onClick={onNewCollection}>
-              +
+              <Plus size={13} />
             </button>
           </div>
           {collectionsOpen && (
@@ -108,25 +117,26 @@ export default function Collection({
                       <ChevronRight size={12} className={`collection-chev ${openColls[collection.id] ?? true ? 'open' : ''}`} />
                       <span className="collection-head-name">{collection.name}</span>
                     </button>
-                    <button
-                      className="collection-head-add"
-                      title="New test in collection"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onNewInCollection(collection.id)
-                      }}
-                    >
-                      +
-                    </button>
-                    <div className="collection-menu">
+                    <div className="collection-head-actions">
                       <button
                         className="collection-head-add"
-                        title="Collection actions"
-                        onClick={(e) => openMenu(e, collection.id)}
+                        title="New test in collection"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onNewInCollection(collection.id)
+                        }}
                       >
-                        <Ellipsis size={14} />
+                        <Plus size={13} />
                       </button>
-                      {menu && menu.id === collection.id && (
+                      <div className="collection-menu">
+                        <button
+                          className="collection-head-add"
+                          title="Collection actions"
+                          onClick={(e) => openMenu(e, collection.id)}
+                        >
+                          <Ellipsis size={14} />
+                        </button>
+                        {menu && menu.id === collection.id && (
                         <>
                           <div className="collection-menu-backdrop" onClick={() => setMenu(null)} />
                           <div className="collection-menu-pop" style={{ left: menu.x, top: menu.y }}>
@@ -153,6 +163,7 @@ export default function Collection({
                       )}
                     </div>
                   </div>
+                </div>
                   {(openColls[collection.id] ?? true) &&
                     items.map((s) => (
                       <ScenarioItem key={s.id} s={s} onOpen={onOpenScenario} onDelete={onDeleteScenario} />
@@ -167,7 +178,19 @@ export default function Collection({
           {runs.length === 0 && <div className="collection-empty">{q ? 'No matches' : 'No runs yet'}</div>}
           {runs.map((r) => (
             <div key={r.runId} className="collection-item" onClick={() => onOpenHistory(r)}>
-              <span className="collection-item-name">{r.name}</span>
+              <span className="collection-item-name">
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                {r.tags && r.tags.length > 0 && (
+                  <span className="collection-item-tags">
+                    {r.tags.slice(0, 2).map((t) => (
+                      <TagBadge key={t} tag={t} size="sm" />
+                    ))}
+                    {r.tags.length > 2 && (
+                      <span className="collection-item-tag-more">+{r.tags.length - 2}</span>
+                    )}
+                  </span>
+                )}
+              </span>
               <div className="collection-item-side">
                 {r.status === 'completed' && r.result !== null && onCompareRun && (
                   <button
@@ -215,7 +238,19 @@ function ScenarioItem({
 }): JSX.Element {
   return (
     <div className="collection-item" onClick={() => onOpen(s)}>
-      <span className="collection-item-name">{s.name}</span>
+      <span className="collection-item-name">
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+        {s.tags && s.tags.length > 0 && (
+          <span className="collection-item-tags">
+            {s.tags.slice(0, 2).map((t) => (
+              <TagBadge key={t} tag={t} size="sm" />
+            ))}
+            {s.tags.length > 2 && (
+              <span className="collection-item-tag-more">+{s.tags.length - 2}</span>
+            )}
+          </span>
+        )}
+      </span>
       <button
         className="collection-item-action"
         title="Delete"

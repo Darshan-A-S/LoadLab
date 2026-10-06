@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { validate, safetyWarnings } from '@shared/validation'
 import { ENGINE_DEFAULTS, type TestDefinition, type HttpMethod, type EngineType } from '@shared/types'
 import RequestEditor from './RequestEditor'
+import TagSelector from './TagSelector'
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
@@ -97,6 +98,10 @@ export default function Builder({ draft, onChange, error, onStarted, onError, on
             value={draft.name}
             onChange={(e) => set({ name: e.target.value })}
             placeholder="Untitled Test (enter test name...)"
+          />
+          <TagSelector
+            tags={draft.tags || []}
+            onChange={(tags) => set({ tags })}
           />
         </div>
         <button onClick={onSave} title="Save test to a collection">

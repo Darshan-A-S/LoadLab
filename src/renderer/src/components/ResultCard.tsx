@@ -1,14 +1,31 @@
+import { useState, useEffect } from 'react'
 import { fmtNum, fmtMs, fmtBytes, fmtPct, fmtTotalBytes } from '../format'
 import type { TestResult } from '@shared/types'
+import TagSelector from './TagSelector'
 
 interface Props {
   result: TestResult
   status: string
   onRunAgain: () => void
   onCompare?: () => void
+  onTagsChange?: (tags: string[]) => void
 }
 
-export default function ResultCard({ result, status, onRunAgain, onCompare }: Props): JSX.Element {
+export default function ResultCard({ result, status, onRunAgain, onCompare, onTagsChange }: Props): JSX.Element {
+  const [tags, setTags] = useState<string[]>(result.tags || [])
+
+  useEffect(() => {
+    setTags(result.tags || [])
+  }, [result.tags])
+
+  const handleTagsChange = (newTags: string[]): void => {
+    setTags(newTags)
+    if (result.runId) {
+      void window.loadlab.runs.updateTags(result.runId, newTags)
+    }
+    onTagsChange?.(newTags)
+  }
+
   const l = result.latency
   const s = result.summary
   const codes = Object.entries(result.statusCodes ?? {})
@@ -16,8 +33,9 @@ export default function ResultCard({ result, status, onRunAgain, onCompare }: Pr
     .slice(0, 6)
   return (
     <div>
-      <div className="headerbar">
+      <div className="headerbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ margin: 0 }}>Test {status === 'stopped' ? 'Stopped' : 'Complete'}</h1>
+        <TagSelector tags={tags} onChange={handleTagsChange} />
       </div>
       <div className="card">
         <div className="section-label">Performance</div>

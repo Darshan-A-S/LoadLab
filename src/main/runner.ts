@@ -64,7 +64,8 @@ export function startTest(
     target: def.target.url,
     engine: engineType,
     status: 'starting',
-    startedAt: new Date().toISOString()
+    startedAt: new Date().toISOString(),
+    tags: def.tags || []
   })
 
   runEngines.set(runId, engineType)
@@ -80,6 +81,9 @@ export function startTest(
         updateRunDone(runId, 'failed', null, err.message)
         push({ type: 'result', data: { runId, status: 'failed', error: err.message } satisfies ResultEvent })
         return
+      }
+      if (result && def.tags && def.tags.length && !result.tags) {
+        result.tags = def.tags
       }
       const status = wasStopped ? 'stopped' : 'completed'
       updateRunDone(runId, status, result)

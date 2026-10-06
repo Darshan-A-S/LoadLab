@@ -588,11 +588,15 @@ label.field {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px 3px;
+  padding: 4px 8px;
+  min-height: 24px;
 }
 
 .collection-head .collection-collapse {
   padding: 0;
+  min-width: 0;
+  width: auto;
+  flex: 1;
 }
 
 .collection-head .collection-head-name {
@@ -612,47 +616,54 @@ label.field {
   white-space: nowrap;
 }
 
-.collection-head-add {
+.collection-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   flex: none;
+}
+
+.collection-head-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1;
-  padding: 0 4px;
   opacity: 0.6;
   cursor: pointer;
-  border-radius: 3px;
-  transition: opacity 0.15s, color 0.15s;
+  border-radius: 4px;
+  flex: none;
+  line-height: 1;
+  transition: opacity 0.15s, color 0.15s, background-color 0.15s;
 }
 
-.collection-head:hover .collection-head-add {
+.collection-head-add svg {
+  display: block;
+  flex: none;
+}
+
+.collection-head:hover .collection-head-add,
+.collection-collapse-row:hover .collection-collapse-add {
   opacity: 1;
 }
 
 .collection-head-add:hover {
   opacity: 1;
-  color: var(--accent);
-}
-
-.collection-menu .collection-head-add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  line-height: 1;
-  flex: none;
-}
-
-.collection-menu .collection-head-add svg {
-  display: block;
+  color: var(--text);
+  background-color: var(--panel-2);
 }
 
 .collection-menu {
   flex: none;
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
 }
 
 .collection-menu-pop {
@@ -2058,24 +2069,252 @@ tr:hover td {
   margin-top: 6px;
 }
 
-.batch-info-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+/* ==========================================================================
+   Tagging & Environment Badge System (prod, uat, dev, local, custom)
+   ========================================================================== */
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  user-select: none;
+  white-space: nowrap;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tag-size-sm {
+  font-size: 9.5px;
+  padding: 2px 6px;
+}
+
+.tag-size-md {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.tag-icon {
+  flex: none;
+  opacity: 0.85;
+}
+
+.tag-clickable {
+  cursor: pointer;
+}
+
+.tag-remove-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-left: 2px;
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.65;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tag-remove-btn:hover {
+  opacity: 1;
+}
+
+/* Environment Color Schemes */
+.tag-prod {
+  color: #ff5d6c;
+  background: rgba(255, 93, 108, 0.14);
+  border: 1px solid rgba(255, 93, 108, 0.32);
+}
+
+.tag-uat {
+  color: #f2994a;
+  background: rgba(242, 153, 74, 0.14);
+  border: 1px solid rgba(242, 153, 74, 0.32);
+}
+
+.tag-dev {
+  color: #5b8cff;
+  background: rgba(91, 140, 255, 0.14);
+  border: 1px solid rgba(91, 140, 255, 0.32);
+}
+
+.tag-local {
+  color: #35d6a6;
+  background: rgba(53, 214, 166, 0.14);
+  border: 1px solid rgba(53, 214, 166, 0.32);
+}
+
+.tag-custom {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.14);
+  border: 1px solid rgba(192, 132, 252, 0.32);
+}
+
+/* Tag Selector & Popover */
+.tag-selector-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tag-list {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tag-add-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: var(--panel-2);
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.tag-add-trigger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(91, 140, 255, 0.08);
+}
+
+.tag-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
-  margin-top: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 10px;
+  min-width: 220px;
 }
 
-.batch-info-icon {
-  font-size: 16px;
-  color: var(--warn);
+.tag-popover-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
 }
 
-.batch-info-text {
-  font-size: 12px;
-  line-height: 1.5;
+.tag-presets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tag-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  justify-content: flex-start;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.tag-preset-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.tag-preset-btn.active {
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.tag-preset-check {
+  margin-left: auto;
+  font-size: 10px;
+}
+
+.tag-custom-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag-custom-input-row input {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11.5px;
   color: var(--text);
+  outline: none;
+}
+
+.tag-custom-input-row input:focus {
+  border-color: var(--accent);
+}
+
+.tag-custom-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+  flex: none;
+}
+
+.tag-custom-add-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tag-custom-add-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.collection-item-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.collection-item-tag-more {
+  font-size: 9px;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.candidate-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
 }

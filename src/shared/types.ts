@@ -10,6 +10,7 @@ export interface AuthConfig {
 
 export interface TestDefinition {
   name: string
+  tags?: string[]
   target: {
     url: string
     method: HttpMethod
@@ -81,6 +82,7 @@ export interface TimeSeriesSample {
 export interface TestResult {
   runId: number
   engine: string
+  tags?: string[]
   startedAt: string
   finishedAt: string
   durationSec: number
@@ -127,6 +129,7 @@ export interface Collection {
 export interface Scenario {
   id: number
   name: string
+  tags?: string[]
   config: TestDefinition
   createdAt: string
   collectionId: number | null
@@ -135,6 +138,7 @@ export interface Scenario {
 export interface HistoryEntry {
   runId: number
   name: string
+  tags?: string[]
   target: string
   engine: string
   status: RunStatus['status']

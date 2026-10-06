@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Search, X, ArrowRight, Zap, AlertCircle } from 'lucide-react'
 import { fmtNum, fmtMs, fmtPct, fmtTime } from '../format'
 import type { HistoryEntry } from '@shared/types'
+import TagBadge from './TagBadge'
 
 interface Props {
   currentRun: HistoryEntry
@@ -34,7 +35,8 @@ export default function ComparePicker({
         r.name.toLowerCase().includes(q) ||
         r.target.toLowerCase().includes(q) ||
         r.engine.toLowerCase().includes(q) ||
-        String(r.runId).includes(q)
+        String(r.runId).includes(q) ||
+        r.tags?.some((t) => t.toLowerCase().includes(q))
       )
     })
 
@@ -155,6 +157,13 @@ function RunCandidateCard({
           <span className="candidate-name">{run.name}</span>
           <span className="candidate-id">#{run.runId}</span>
           <span className="candidate-engine">{run.engine}</span>
+          {run.tags && run.tags.length > 0 && (
+            <div className="candidate-tags">
+              {run.tags.map((t) => (
+                <TagBadge key={t} tag={t} size="sm" />
+              ))}
+            </div>
+          )}
         </div>
         <div className="candidate-target" title={run.target}>
           {run.target}
