@@ -61,11 +61,11 @@ function parseRow(row: Record<string, unknown>): HistoryEntry {
   if (typeof row.tags === 'string' && row.tags.trim()) {
     try {
       const parsed = JSON.parse(row.tags)
-      if (Array.isArray(parsed)) tags = parsed
+      if (Array.isArray(parsed) && parsed.length) tags = [String(parsed[0]).toLowerCase()]
     } catch {}
   }
   const result = row.result ? (JSON.parse(row.result as string) as TestResult) : null
-  if (result && tags.length && !result.tags) {
+  if (result) {
     result.tags = tags
   }
   return {
@@ -89,10 +89,12 @@ function defaultCollectionId(): number {
 
 export function insertScenario(test: TestDefinition, collectionId: number | null): number {
   const now = new Date().toISOString()
-  const tagsStr = test.tags && test.tags.length ? JSON.stringify(test.tags) : null
+  const single = test.tags && test.tags.length ? [test.tags[0].toLowerCase()] : []
+  const tagsStr = single.length ? JSON.stringify(single) : null
+  const cfg = { ...test, tags: single }
   const res = db
     .prepare('INSERT INTO scenarios (name, config, created_at, collection_id, tags) VALUES (?, ?, ?, ?, ?)')
-    .run(test.name, JSON.stringify(test), now, collectionId ?? defaultCollectionId(), tagsStr)
+    .run(test.name, JSON.stringify(cfg), now, collectionId ?? defaultCollectionId(), tagsStr)
   return Number(res.lastInsertRowid)
 }
 
@@ -152,11 +154,11 @@ export function listScenarios(): Scenario[] {
     if (r.tags && r.tags.trim()) {
       try {
         const p = JSON.parse(r.tags)
-        if (Array.isArray(p)) tags = p
+        if (Array.isArray(p) && p.length) tags = [String(p[0]).toLowerCase()]
       } catch {}
     }
     const config = JSON.parse(r.config) as TestDefinition
-    if (tags.length && !config.tags) config.tags = tags
+    config.tags = tags
     return {
       id: r.id,
       name: r.name,
@@ -173,13 +175,14 @@ export function deleteScenario(id: number): void {
 }
 
 export function updateScenarioTags(id: number, tags: string[]): void {
-  const tagsStr = tags && tags.length ? JSON.stringify(tags) : null
+  const single = tags && tags.length ? [tags[0].toLowerCase()] : []
+  const tagsStr = single.length ? JSON.stringify(single) : null
   db.prepare('UPDATE scenarios SET tags = ? WHERE id = ?').run(tagsStr, id)
   const row = db.prepare('SELECT config FROM scenarios WHERE id = ?').get(id) as { config: string } | undefined
   if (row) {
     try {
       const cfg = JSON.parse(row.config) as TestDefinition
-      cfg.tags = tags
+      cfg.tags = single
       db.prepare('UPDATE scenarios SET config = ? WHERE id = ?').run(JSON.stringify(cfg), id)
     } catch {}
   }
@@ -188,7 +191,8 @@ export function updateScenarioTags(id: number, tags: string[]): void {
 export function insertRun(
   run: Omit<HistoryEntry, 'runId' | 'result' | 'finishedAt'> & { scenarioId?: number; tags?: string[] }
 ): number {
-  const tagsStr = run.tags && run.tags.length ? JSON.stringify(run.tags) : null
+  const single = run.tags && run.tags.length ? [run.tags[0].toLowerCase()] : []
+  const tagsStr = single.length ? JSON.stringify(single) : null
   const res = db
     .prepare(
       'INSERT INTO runs (scenario_id, name, target, engine, status, started_at, created_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
@@ -226,6 +230,15 @@ export function updateRunStatus(runId: number, status: HistoryEntry['status']): 
 }
 
 export function updateRunTags(runId: number, tags: string[]): void {
-  const tagsStr = tags && tags.length ? JSON.stringify(tags) : null
+  const single = tags && tags.length ? [tags[0].toLowerCase()] : []
+  const tagsStr = single.length ? JSON.stringify(single) : null
   db.prepare('UPDATE runs SET tags = ? WHERE id = ?').run(tagsStr, runId)
+  const row = db.prepare('SELECT result FROM runs WHERE id = ?').get(runId) as { result: string | null } | undefined
+  if (row && row.result) {
+    try {
+      const res = JSON.parse(row.result) as TestResult
+      res.tags = single
+      db.prepare('UPDATE runs SET result = ? WHERE id = ?').run(JSON.stringify(res), runId)
+    } catch {}
+  }
 }

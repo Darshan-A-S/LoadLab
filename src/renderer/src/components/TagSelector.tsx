@@ -1,26 +1,31 @@
 import { useState, useRef, useEffect } from 'react'
 import { Tag as TagIcon, Plus } from 'lucide-react'
-import TagBadge, { getTagColorClass } from './TagBadge'
+import TagBadge from './TagBadge'
 
 const PRESET_TAGS = ['prod', 'uat', 'dev', 'local']
 
 interface Props {
-  tags: string[]
+  tags?: string[]
   onChange: (tags: string[]) => void
   editable?: boolean
   compact?: boolean
+  align?: 'left' | 'right'
 }
 
 export default function TagSelector({
   tags = [],
   onChange,
   editable = true,
-  compact = false
+  compact = false,
+  align
 }: Props): JSX.Element {
   const [open, setOpen] = useState(false)
   const [customInput, setCustomInput] = useState('')
+  const [effectiveAlign, setEffectiveAlign] = useState<'left' | 'right'>(align || 'left')
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const currentTag = tags && tags.length > 0 ? tags[0] : ''
 
   useEffect(() => {
     if (!open) return
@@ -46,72 +51,84 @@ export default function TagSelector({
 
   useEffect(() => {
     if (open) {
+      if (align) {
+        setEffectiveAlign(align)
+      } else if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        if (window.innerWidth - rect.left < 240 || rect.right > window.innerWidth - 60) {
+          setEffectiveAlign('right')
+        } else {
+          setEffectiveAlign('left')
+        }
+      }
       setTimeout(() => inputRef.current?.focus(), 50)
     }
-  }, [open])
+  }, [open, align])
 
-  const toggleTag = (t: string): void => {
-    const norm = t.trim().toLowerCase()
-    if (!norm) return
-    if (tags.some((existing) => existing.toLowerCase() === norm)) {
-      onChange(tags.filter((existing) => existing.toLowerCase() !== norm))
+  const selectPreset = (preset: string): void => {
+    const norm = preset.trim().toLowerCase()
+    if (currentTag.toLowerCase() === norm) {
+      onChange([])
     } else {
-      onChange([...tags, norm])
+      onChange([norm])
     }
-  }
-
-  const removeTag = (t: string): void => {
-    onChange(tags.filter((existing) => existing.toLowerCase() !== t.toLowerCase()))
+    setOpen(false)
   }
 
   const handleAddCustom = (): void => {
     const val = customInput.trim().toLowerCase()
     if (!val) return
-    if (!tags.some((t) => t.toLowerCase() === val)) {
-      onChange([...tags, val])
-    }
+    onChange([val])
     setCustomInput('')
+    setOpen(false)
+  }
+
+  const handleClear = (): void => {
+    onChange([])
+    setOpen(false)
   }
 
   return (
     <div className={`tag-selector-wrapper ${compact ? 'compact' : ''}`} ref={containerRef}>
       <div className="tag-list">
-        {tags.map((t) => (
+        {currentTag ? (
           <TagBadge
-            key={t}
-            tag={t}
+            tag={currentTag}
             size={compact ? 'sm' : 'md'}
-            onRemove={editable ? () => removeTag(t) : undefined}
+            onClick={editable ? () => setOpen((prev) => !prev) : undefined}
+            onRemove={editable ? handleClear : undefined}
           />
-        ))}
-
-        {editable && (
-          <button
-            type="button"
-            className="tag-add-trigger"
-            onClick={() => setOpen((prev) => !prev)}
-            title="Add or edit tags"
-          >
-            <TagIcon size={12} className="tag-trigger-icon" />
-            <span>{tags.length === 0 ? 'Add Tag' : '+ Tag'}</span>
-          </button>
+        ) : (
+          editable && (
+            <button
+              type="button"
+              className="tag-add-trigger"
+              onClick={() => setOpen((prev) => !prev)}
+              title="Add tag"
+            >
+              <TagIcon size={12} className="tag-trigger-icon" />
+              <span>Add Tag</span>
+            </button>
+          )
         )}
       </div>
 
       {open && editable && (
-        <div className="tag-popover" onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`tag-popover ${effectiveAlign === 'right' ? 'align-right' : ''}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="tag-popover-title">Select Environment / Tag</div>
 
           <div className="tag-presets-grid">
             {PRESET_TAGS.map((preset) => {
-              const active = tags.some((t) => t.toLowerCase() === preset)
-              const colorClass = getTagColorClass(preset)
+              const active = currentTag.toLowerCase() === preset.toLowerCase()
               return (
                 <button
                   key={preset}
                   type="button"
-                  className={`tag-preset-btn ${colorClass} ${active ? 'active' : ''}`}
-                  onClick={() => toggleTag(preset)}
+                  className={`tag-preset-btn ${active ? 'active' : ''}`}
+                  onClick={() => selectPreset(preset)}
                 >
                   <TagIcon size={11} />
                   <span>{preset}</span>
@@ -140,10 +157,17 @@ export default function TagSelector({
               className="tag-custom-add-btn"
               onClick={handleAddCustom}
               disabled={!customInput.trim()}
+              title="Set custom tag"
             >
               <Plus size={13} />
             </button>
           </div>
+
+          {currentTag && (
+            <button type="button" className="tag-clear-btn" onClick={handleClear}>
+              Clear Tag
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -125,14 +125,22 @@ export default function App(): JSX.Element {
         )
       } else {
         const d = ev.data as Extract<RunEvent, { type: 'result' }>['data']
-        if (d.result) setResultPopup({ runId: d.runId, status: d.status, result: d.result })
+        if (d.result) {
+          const tab = tabs.find((t) => t.kind === 'editor' && t.running && t.running.runId === d.runId)
+          if (tab && tab.draft.tags && tab.draft.tags.length && (!d.result.tags || !d.result.tags.length)) {
+            d.result.tags = [tab.draft.tags[0]]
+          }
+          setResultPopup({ runId: d.runId, status: d.status, result: d.result })
+        }
         setTabs((ts) =>
           ts.map((t) => {
             if (t.kind !== 'editor' || !t.running || t.running.runId !== d.runId) return t
             if (d.status === 'running') return { ...t, running: { ...t.running, runId: d.runId } }
             if (d.error) return { ...t, running: null, error: d.error }
             if (d.result) {
-              return { ...t, running: null, result: { runId: d.runId, status: d.status, result: d.result } }
+              const resTags = d.result.tags && d.result.tags.length ? [d.result.tags[0]] : (t.draft.tags && t.draft.tags.length ? [t.draft.tags[0]] : [])
+              const updatedResult = { ...d.result, tags: resTags }
+              return { ...t, running: null, result: { runId: d.runId, status: d.status, result: updatedResult } }
             }
             return { ...t, running: null, error: 'Test ended without a result.' }
           })
@@ -247,6 +255,9 @@ export default function App(): JSX.Element {
     const tab = tabs.find(
       (t): t is EditorTab => t.kind === 'editor' && t.result !== null && t.result.runId === resultPopup.runId
     )
+    if (tab && resultPopup.result.tags && resultPopup.result.tags.length) {
+      tab.draft.tags = [resultPopup.result.tags[0]]
+    }
     setResultPopup(null)
     if (!tab) return
     const set = (err: unknown): void =>
@@ -586,7 +597,16 @@ export default function App(): JSX.Element {
             ) : (
               <Builder
                 draft={activeTab.draft}
-                onChange={(d) => updateActive((t) => ({ ...t, draft: typeof d === 'function' ? d(t.draft) : d }))}
+                onChange={(d) =>
+                  updateActive((t) => {
+                    const nextDraft = typeof d === 'function' ? d(t.draft) : d
+                    if (t.savedId != null && JSON.stringify(nextDraft.tags) !== JSON.stringify(t.draft.tags)) {
+                      void window.loadlab.scenarios.updateTags(t.savedId, nextDraft.tags || [])
+                      refreshScenarios()
+                    }
+                    return { ...t, draft: nextDraft }
+                  })
+                }
                 error={activeTab.error}
                 onStarted={(runId, def) =>
                   updateActive((t) => ({
@@ -710,6 +730,17 @@ export default function App(): JSX.Element {
               onCompare={handleResultPopupCompare}
               onTagsChange={(tags) => {
                 setResultPopup((prev) => (prev ? { ...prev, result: { ...prev.result, tags } } : null))
+                setTabs((ts) =>
+                  ts.map((t) =>
+                    t.kind === 'editor' && t.result?.runId === resultPopup.runId
+                      ? {
+                          ...t,
+                          draft: { ...t.draft, tags },
+                          result: { ...t.result, result: { ...t.result.result, tags } }
+                        }
+                      : t
+                  )
+                )
                 refreshHistory()
               }}
             />

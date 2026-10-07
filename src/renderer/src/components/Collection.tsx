@@ -182,12 +182,7 @@ export default function Collection({
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                 {r.tags && r.tags.length > 0 && (
                   <span className="collection-item-tags">
-                    {r.tags.slice(0, 2).map((t) => (
-                      <TagBadge key={t} tag={t} size="sm" />
-                    ))}
-                    {r.tags.length > 2 && (
-                      <span className="collection-item-tag-more">+{r.tags.length - 2}</span>
-                    )}
+                    <TagBadge tag={r.tags[0]} size="sm" />
                   </span>
                 )}
               </span>
@@ -242,12 +237,7 @@ function ScenarioItem({
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
         {s.tags && s.tags.length > 0 && (
           <span className="collection-item-tags">
-            {s.tags.slice(0, 2).map((t) => (
-              <TagBadge key={t} tag={t} size="sm" />
-            ))}
-            {s.tags.length > 2 && (
-              <span className="collection-item-tag-more">+{s.tags.length - 2}</span>
-            )}
+            <TagBadge tag={s.tags[0]} size="sm" />
           </span>
         )}
       </span>

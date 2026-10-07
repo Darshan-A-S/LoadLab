@@ -159,9 +159,7 @@ function RunCandidateCard({
           <span className="candidate-engine">{run.engine}</span>
           {run.tags && run.tags.length > 0 && (
             <div className="candidate-tags">
-              {run.tags.map((t) => (
-                <TagBadge key={t} tag={t} size="sm" />
-              ))}
+              <TagBadge tag={run.tags[0]} size="sm" />
             </div>
           )}
         </div>

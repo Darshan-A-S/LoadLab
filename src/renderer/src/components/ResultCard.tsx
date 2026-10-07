@@ -19,11 +19,12 @@ export default function ResultCard({ result, status, onRunAgain, onCompare, onTa
   }, [result.tags])
 
   const handleTagsChange = (newTags: string[]): void => {
-    setTags(newTags)
+    const single = newTags.slice(0, 1)
+    setTags(single)
     if (result.runId) {
-      void window.loadlab.runs.updateTags(result.runId, newTags)
+      void window.loadlab.runs.updateTags(result.runId, single)
     }
-    onTagsChange?.(newTags)
+    onTagsChange?.(single)
   }
 
   const l = result.latency
@@ -33,9 +34,9 @@ export default function ResultCard({ result, status, onRunAgain, onCompare, onTa
     .slice(0, 6)
   return (
     <div>
-      <div className="headerbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{ margin: 0 }}>Test {status === 'stopped' ? 'Stopped' : 'Complete'}</h1>
-        <TagSelector tags={tags} onChange={handleTagsChange} />
+      <div className="headerbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+        <h1 style={{ margin: 0, minWidth: 0, whiteSpace: 'nowrap' }}>Test {status === 'stopped' ? 'Stopped' : 'Complete'}</h1>
+        <TagSelector tags={tags} onChange={handleTagsChange} align="right" />
       </div>
       <div className="card">
         <div className="section-label">Performance</div>

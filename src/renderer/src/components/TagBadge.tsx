@@ -7,13 +7,8 @@ export interface TagBadgeProps {
   onClick?: () => void
 }
 
-export function getTagColorClass(tag: string): string {
-  const norm = tag.toLowerCase().trim()
-  if (norm === 'prod' || norm === 'production') return 'tag-prod'
-  if (norm === 'uat' || norm === 'staging') return 'tag-uat'
-  if (norm === 'dev' || norm === 'development') return 'tag-dev'
-  if (norm === 'local' || norm === 'localhost') return 'tag-local'
-  return 'tag-custom'
+export function getTagColorClass(_tag: string): string {
+  return ''
 }
 
 export default function TagBadge({
@@ -22,14 +17,13 @@ export default function TagBadge({
   onRemove,
   onClick
 }: TagBadgeProps): JSX.Element {
-  const colorClass = getTagColorClass(tag)
-  const iconSize = size === 'sm' ? 9 : 11
+  const iconSize = size === 'sm' ? 10 : 11
 
   return (
     <span
-      className={`tag-pill ${colorClass} tag-size-${size} ${onClick ? 'tag-clickable' : ''}`}
+      className={`tag-pill tag-size-${size} ${onClick ? 'tag-clickable' : ''}`}
       onClick={onClick}
-      title={`Tag: ${tag}`}
+      title={onClick ? `Tag: ${tag} (click to change)` : `Tag: ${tag}`}
     >
       <TagIcon size={iconSize} className="tag-icon" />
       <span className="tag-text">{tag}</span>

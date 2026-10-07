@@ -907,6 +907,7 @@ label.field {
 main {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
   background: var(--bg);
 }
@@ -1014,7 +1015,8 @@ main {
   max-width: 680px;
   width: 92%;
   max-height: 86vh;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .modal .actions {
@@ -2070,40 +2072,50 @@ tr:hover td {
 }
 
 /* ==========================================================================
-   Tagging & Environment Badge System (prod, uat, dev, local, custom)
+   Tagging System (single tag, unified simple style)
    ========================================================================== */
 
 .tag-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border-radius: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  gap: 5px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
   user-select: none;
   white-space: nowrap;
   line-height: 1;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2.5px 7px;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.tag-pill.tag-clickable {
+  cursor: pointer;
+}
+
+.tag-pill.tag-clickable:hover {
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .tag-size-sm {
-  font-size: 9.5px;
-  padding: 2px 6px;
+  font-size: 10px;
+  padding: 1.5px 6px;
+  gap: 4px;
 }
 
 .tag-size-md {
   font-size: 11px;
-  padding: 3px 8px;
+  padding: 2.5px 7px;
 }
 
 .tag-icon {
   flex: none;
-  opacity: 0.85;
-}
-
-.tag-clickable {
-  cursor: pointer;
+  opacity: 0.7;
 }
 
 .tag-remove-btn {
@@ -2111,50 +2123,19 @@ tr:hover td {
   border: none;
   padding: 0;
   margin-left: 2px;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   cursor: pointer;
-  color: inherit;
-  opacity: 0.65;
-  border-radius: 50%;
+  color: var(--muted);
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: color 0.15s;
 }
 
 .tag-remove-btn:hover {
-  opacity: 1;
-}
-
-/* Environment Color Schemes */
-.tag-prod {
-  color: #ff5d6c;
-  background: rgba(255, 93, 108, 0.14);
-  border: 1px solid rgba(255, 93, 108, 0.32);
-}
-
-.tag-uat {
-  color: #f2994a;
-  background: rgba(242, 153, 74, 0.14);
-  border: 1px solid rgba(242, 153, 74, 0.32);
-}
-
-.tag-dev {
-  color: #5b8cff;
-  background: rgba(91, 140, 255, 0.14);
-  border: 1px solid rgba(91, 140, 255, 0.32);
-}
-
-.tag-local {
-  color: #35d6a6;
-  background: rgba(53, 214, 166, 0.14);
-  border: 1px solid rgba(53, 214, 166, 0.32);
-}
-
-.tag-custom {
-  color: #c084fc;
-  background: rgba(192, 132, 252, 0.14);
-  border: 1px solid rgba(192, 132, 252, 0.32);
+  color: var(--danger);
 }
 
 /* Tag Selector & Popover */
@@ -2162,12 +2143,13 @@ tr:hover td {
   position: relative;
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .tag-list {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 5px;
 }
 
@@ -2180,17 +2162,17 @@ tr:hover td {
   color: var(--muted);
   font-size: 11px;
   font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 12px;
+  padding: 2.5px 8px;
+  border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s ease;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .tag-add-trigger:hover {
   border-color: var(--accent);
   color: var(--accent);
-  background: rgba(91, 140, 255, 0.08);
 }
 
 .tag-popover {
@@ -2204,6 +2186,11 @@ tr:hover td {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   padding: 10px;
   min-width: 220px;
+}
+
+.tag-popover.align-right {
+  left: auto;
+  right: 0;
 }
 
 .tag-popover-title {
@@ -2226,40 +2213,47 @@ tr:hover td {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  font-size: 11.5px;
+  font-weight: 500;
   cursor: pointer;
   justify-content: flex-start;
-  transition: transform 0.1s ease, filter 0.1s ease;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .tag-preset-btn:hover {
-  filter: brightness(1.15);
-  transform: translateY(-1px);
+  border-color: var(--muted);
+  background: var(--chrome);
 }
 
 .tag-preset-btn.active {
-  box-shadow: 0 0 0 1px currentColor;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(255, 108, 55, 0.08);
 }
 
 .tag-preset-check {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .tag-custom-input-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .tag-custom-input-row input {
   flex: 1;
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   padding: 4px 8px;
   font-size: 11.5px;
   color: var(--text);
@@ -2280,7 +2274,7 @@ tr:hover td {
   border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
-  border-radius: 4px;
+  border-radius: var(--radius);
   cursor: pointer;
   flex: none;
 }
@@ -2295,21 +2289,32 @@ tr:hover td {
   cursor: not-allowed;
 }
 
+.tag-clear-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 8px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.tag-clear-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .collection-item-tags {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   margin-left: 6px;
   flex-shrink: 0;
-}
-
-.collection-item-tag-more {
-  font-size: 9px;
-  color: var(--muted);
-  font-weight: 600;
-  padding: 1px 4px;
-  border-radius: 8px;
-  background: var(--panel-2);
 }
 
 .candidate-tags {

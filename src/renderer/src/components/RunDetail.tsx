@@ -19,20 +19,23 @@ export default function RunDetail({
   }, [run.tags])
 
   const handleTagsChange = (newTags: string[]): void => {
-    setTags(newTags)
+    const single = newTags.slice(0, 1)
+    setTags(single)
     if (run.runId) {
-      void window.loadlab.runs.updateTags(run.runId, newTags)
+      void window.loadlab.runs.updateTags(run.runId, single)
     }
-    onTagsChange?.(newTags)
+    onTagsChange?.(single)
   }
 
   const r = run.result
   if (!r) {
     return (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <h2 style={{ margin: 0 }}>{run.name}</h2>
-          <TagSelector tags={tags} onChange={handleTagsChange} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+          <h2 style={{ margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={run.name}>
+            {run.name}
+          </h2>
+          <TagSelector tags={tags} onChange={handleTagsChange} align="right" />
         </div>
         <p className="muted" style={{ wordBreak: 'break-all' }}>
           {run.target}
@@ -45,11 +48,11 @@ export default function RunDetail({
   const s = r.summary
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <h2 style={{ margin: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+        <h2 style={{ margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${run.name} (#${run.runId})`}>
           {run.name} <span className="muted">(#{run.runId})</span>
         </h2>
-        <TagSelector tags={tags} onChange={handleTagsChange} />
+        <TagSelector tags={tags} onChange={handleTagsChange} align="right" />
       </div>
       <p className="muted" style={{ wordBreak: 'break-all' }}>
         {run.target}

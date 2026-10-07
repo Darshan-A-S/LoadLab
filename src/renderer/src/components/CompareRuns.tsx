@@ -352,8 +352,8 @@ export default function CompareRuns({
   const generateMarkdownReport = (): string => {
     const lines: string[] = []
     lines.push(`# LoadLab Comparison Report`)
-    const tagsA = runA.tags && runA.tags.length ? ` [Tags: ${runA.tags.join(', ')}]` : ''
-    const tagsB = runB.tags && runB.tags.length ? ` [Tags: ${runB.tags.join(', ')}]` : ''
+    const tagsA = runA.tags && runA.tags.length ? ` [Tag: ${runA.tags[0]}]` : ''
+    const tagsB = runB.tags && runB.tags.length ? ` [Tag: ${runB.tags[0]}]` : ''
     lines.push(
       `**Baseline (A)**: ${runA.name} (#${runA.runId}) - ${runA.target} (${runA.engine})${tagsA}`
     )
@@ -466,11 +466,7 @@ export default function CompareRuns({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
               <div className="config-box-tag">Baseline (A)</div>
               {runA.tags && runA.tags.length > 0 && (
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {runA.tags.map((t) => (
-                    <TagBadge key={t} tag={t} size="sm" />
-                  ))}
-                </div>
+                <TagBadge tag={runA.tags[0]} size="sm" />
               )}
             </div>
             <div className="config-run-select">
@@ -510,11 +506,7 @@ export default function CompareRuns({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
               <div className="config-box-tag">Target / Candidate (B)</div>
               {runB.tags && runB.tags.length > 0 && (
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {runB.tags.map((t) => (
-                    <TagBadge key={t} tag={t} size="sm" />
-                  ))}
-                </div>
+                <TagBadge tag={runB.tags[0]} size="sm" />
               )}
             </div>
             <div className="config-run-select">

@@ -58,6 +58,8 @@ export function startTest(
   const engineErrors = engine.validate(def)
   if (engineErrors.length) throw new Error(engineErrors.join('; '))
 
+  const runTags = def.tags && def.tags.length ? [def.tags[0]] : []
+
   const runId = insertRun({
     scenarioId,
     name: def.name,
@@ -65,7 +67,7 @@ export function startTest(
     engine: engineType,
     status: 'starting',
     startedAt: new Date().toISOString(),
-    tags: def.tags || []
+    tags: runTags
   })
 
   runEngines.set(runId, engineType)
@@ -82,8 +84,8 @@ export function startTest(
         push({ type: 'result', data: { runId, status: 'failed', error: err.message } satisfies ResultEvent })
         return
       }
-      if (result && def.tags && def.tags.length && !result.tags) {
-        result.tags = def.tags
+      if (result) {
+        result.tags = runTags
       }
       const status = wasStopped ? 'stopped' : 'completed'
       updateRunDone(runId, status, result)
