@@ -60,3 +60,14 @@ export function safetyWarnings(test: TestDefinition): SafetyWarnings {
   const aggressive = l.connections * l.durationSeconds > 20000
   return { remoteTarget: !isLocalHostname(hostname), aggressive }
 }
+
+export function getAvailableName(baseName: string, existingNames: string[]): string {
+  const lowerNames = new Set(existingNames.map((n) => n.trim().toLowerCase()))
+  let candidate = `${baseName} (1)`
+  let counter = 1
+  while (lowerNames.has(candidate.toLowerCase())) {
+    counter++
+    candidate = `${baseName} (${counter})`
+  }
+  return candidate
+}

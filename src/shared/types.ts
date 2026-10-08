@@ -124,7 +124,25 @@ export interface Collection {
   id: number
   name: string
   createdAt: string
+  isImported?: boolean
 }
+
+export type ImportResult =
+  | {
+      status: 'success'
+      id: number
+      name: string
+      imported: number
+      skipped: string[]
+    }
+  | {
+      status: 'collision'
+      name: string
+      existingCollection: { id: number; name: string }
+      suggestedName: string
+      configs: TestDefinition[]
+      skipped: string[]
+    }
 
 export interface Scenario {
   id: number

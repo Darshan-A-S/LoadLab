@@ -1,11 +1,11 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { initDb, insertScenario, listScenarios, deleteScenario, updateScenarioTags, listRuns, updateRunTags, listCollections, createCollection, renameCollection, duplicateCollection, deleteCollection, importCollection } from './db'
+import { initDb, insertScenario, listScenarios, deleteScenario, updateScenarioTags, listRuns, updateRunTags, listCollections, createCollection, renameCollection, duplicateCollection, deleteCollection, importCollection, replaceCollection, clearCollectionScenarios } from './db'
 import { startTest, stopTest, activeRunIds } from './runner'
 import { renderJSON, renderCSV } from './export'
-import { validate } from '../shared/validation'
-import type { TestDefinition } from '../shared/types'
+import { validate, getAvailableName } from '../shared/validation'
+import type { TestDefinition, ImportResult } from '../shared/types'
 import type { HistoryEntry } from '../shared/types'
 
 function createWindow(): BrowserWindow {
@@ -72,6 +72,7 @@ const push = (ev: { type: 'sample' | 'result'; data: unknown }): void => {
   send('run:event', ev)
 }
 
+
 app.whenReady().then(() => {
   initDb()
   Menu.setApplicationMenu(null)
@@ -127,7 +128,7 @@ app.whenReady().then(() => {
     await writeFile(filePath, JSON.stringify({ name: coll.name, scenarios }, null, 2), 'utf8')
     return filePath
   })
-  ipcMain.handle('collections:import', async (e) => {
+  ipcMain.handle('collections:import', async (e): Promise<ImportResult | null> => {
     const win = BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getAllWindows()[0]
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
       properties: ['openFile'],
@@ -155,8 +156,41 @@ app.whenReady().then(() => {
     if (configs.length === 0 && data.scenarios.length > 0) {
       throw new Error(`No importable scenarios: ${skipped.join(', ')}`)
     }
+
+    const existingCollections = listCollections()
+    const importedCollections = existingCollections.filter((c) => Boolean(c.isImported))
+    const existing = importedCollections.find(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase()
+    )
+
+    if (existing) {
+      const suggestedName = getAvailableName(
+        name,
+        importedCollections.map((c) => c.name)
+      )
+      return {
+        status: 'collision',
+        name,
+        existingCollection: { id: existing.id, name: existing.name },
+        suggestedName,
+        configs,
+        skipped
+      }
+    }
+
     const id = importCollection(name, configs)
-    return { id, name, imported: configs.length, skipped }
+    return { status: 'success', id, name, imported: configs.length, skipped }
+  })
+  ipcMain.handle('collections:clearScenarios', (_e, id: number) => {
+    clearCollectionScenarios(id)
+  })
+  ipcMain.handle('collections:replace', (_e, id: number, name: string, configs: TestDefinition[]) => {
+    replaceCollection(id, name, configs)
+    return { id, name, imported: configs.length }
+  })
+  ipcMain.handle('collections:createImported', (_e, name: string, configs: TestDefinition[]) => {
+    const id = importCollection(name, configs)
+    return { id, name, imported: configs.length }
   })
   ipcMain.handle('runs:list', () => listRuns() as HistoryEntry[])
   ipcMain.handle('runs:start', (_e, test: TestDefinition) => startTest(test, undefined, push))

@@ -6,10 +6,11 @@ import type {
   Collection,
   SampleEvent,
   ResultEvent,
-  RunEvent
+  RunEvent,
+  ImportResult
 } from '../shared/types'
 
-export type { RunEvent }
+export type { RunEvent, ImportResult }
 
 const loadlab = {
   scenarios: {
@@ -26,8 +27,12 @@ const loadlab = {
     duplicate: (id: number): Promise<{ id: number }> => ipcRenderer.invoke('collections:duplicate', id),
     delete: (id: number): Promise<void> => ipcRenderer.invoke('collections:delete', id),
     export: (id: number): Promise<string | null> => ipcRenderer.invoke('collections:export', id),
-    import: (): Promise<{ id: number; name: string; imported: number; skipped: string[] } | null> =>
-      ipcRenderer.invoke('collections:import')
+    import: (): Promise<ImportResult | null> => ipcRenderer.invoke('collections:import'),
+    replace: (id: number, name: string, configs: TestDefinition[]): Promise<{ id: number; name: string; imported: number }> =>
+      ipcRenderer.invoke('collections:replace', id, name, configs),
+    createImported: (name: string, configs: TestDefinition[]): Promise<{ id: number; name: string; imported: number }> =>
+      ipcRenderer.invoke('collections:createImported', name, configs),
+    clearScenarios: (id: number): Promise<void> => ipcRenderer.invoke('collections:clearScenarios', id)
   },
   runs: {
     list: (): Promise<HistoryEntry[]> => ipcRenderer.invoke('runs:list'),

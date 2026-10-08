@@ -1,6 +1,6 @@
-import type { TestDefinition, Scenario, HistoryEntry, Collection, SampleEvent, ResultEvent, RunEvent } from '../shared/types'
+import type { TestDefinition, Scenario, HistoryEntry, Collection, SampleEvent, ResultEvent, RunEvent, ImportResult } from '../shared/types'
 
-export type { RunEvent }
+export type { RunEvent, ImportResult }
 
 declare global {
   interface Window {
@@ -18,7 +18,10 @@ declare global {
         duplicate: (id: number) => Promise<{ id: number }>
         delete: (id: number) => Promise<void>
         export: (id: number) => Promise<string | null>
-        import: () => Promise<{ id: number; name: string; imported: number; skipped: string[] } | null>
+        import: () => Promise<ImportResult | null>
+        replace: (id: number, name: string, configs: TestDefinition[]) => Promise<{ id: number; name: string; imported: number }>
+        createImported: (name: string, configs: TestDefinition[]) => Promise<{ id: number; name: string; imported: number }>
+        clearScenarios: (id: number) => Promise<void>
       }
       runs: {
         list: () => Promise<HistoryEntry[]>

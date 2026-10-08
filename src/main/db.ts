@@ -13,7 +13,8 @@ export function initDb(): void {
     CREATE TABLE IF NOT EXISTS collections (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      is_imported INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS scenarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,6 +43,10 @@ export function initDb(): void {
 }
 
 function migrate(): void {
+  const collCols = db.prepare('PRAGMA table_info(collections)').all() as { name: string }[]
+  if (!collCols.some((c) => c.name === 'is_imported')) {
+    db.exec('ALTER TABLE collections ADD COLUMN is_imported INTEGER DEFAULT 0')
+  }
   const scenCols = db.prepare('PRAGMA table_info(scenarios)').all() as { name: string }[]
   if (!scenCols.some((c) => c.name === 'collection_id')) {
     db.exec('ALTER TABLE scenarios ADD COLUMN collection_id INTEGER')
@@ -53,7 +58,6 @@ function migrate(): void {
   if (!runCols.some((c) => c.name === 'tags')) {
     db.exec('ALTER TABLE runs ADD COLUMN tags TEXT')
   }
-  db.prepare('UPDATE scenarios SET collection_id = ? WHERE collection_id IS NULL').run(defaultCollectionId())
 }
 
 function parseRow(row: Record<string, unknown>): HistoryEntry {
@@ -81,12 +85,6 @@ function parseRow(row: Record<string, unknown>): HistoryEntry {
   }
 }
 
-function defaultCollectionId(): number {
-  const row = db.prepare('SELECT id FROM collections ORDER BY id LIMIT 1').get() as { id: number } | undefined
-  if (row) return row.id
-  return createCollection('My Collection')
-}
-
 export function insertScenario(test: TestDefinition, collectionId: number | null): number {
   const now = new Date().toISOString()
   const single = test.tags && test.tags.length ? [test.tags[0].toLowerCase()] : []
@@ -94,22 +92,23 @@ export function insertScenario(test: TestDefinition, collectionId: number | null
   const cfg = { ...test, tags: single }
   const res = db
     .prepare('INSERT INTO scenarios (name, config, created_at, collection_id, tags) VALUES (?, ?, ?, ?, ?)')
-    .run(test.name, JSON.stringify(cfg), now, collectionId ?? defaultCollectionId(), tagsStr)
+    .run(test.name, JSON.stringify(cfg), now, collectionId ?? null, tagsStr)
   return Number(res.lastInsertRowid)
 }
 
 export function listCollections(): Collection[] {
-  const rows = db.prepare('SELECT id, name, created_at FROM collections ORDER BY name COLLATE NOCASE').all() as {
+  const rows = db.prepare('SELECT id, name, created_at, is_imported FROM collections ORDER BY name COLLATE NOCASE').all() as {
     id: number
     name: string
     created_at: string
+    is_imported?: number
   }[]
-  return rows.map((r) => ({ id: r.id, name: r.name, createdAt: r.created_at }))
+  return rows.map((r) => ({ id: r.id, name: r.name, createdAt: r.created_at, isImported: Boolean(r.is_imported) }))
 }
 
-export function createCollection(name: string): number {
+export function createCollection(name: string, isImported = false): number {
   const now = new Date().toISOString()
-  const res = db.prepare('INSERT INTO collections (name, created_at) VALUES (?, ?)').run(name, now)
+  const res = db.prepare('INSERT INTO collections (name, created_at, is_imported) VALUES (?, ?, ?)').run(name, now, isImported ? 1 : 0)
   return Number(res.lastInsertRowid)
 }
 
@@ -120,7 +119,7 @@ export function renameCollection(id: number, name: string): void {
 export function duplicateCollection(id: number): number {
   const now = new Date().toISOString()
   const res = db
-    .prepare("INSERT INTO collections (name, created_at) SELECT name || ' Copy', ? FROM collections WHERE id = ?")
+    .prepare("INSERT INTO collections (name, created_at, is_imported) SELECT name || ' Copy', ?, is_imported FROM collections WHERE id = ?")
     .run(now, id)
   const newId = Number(res.lastInsertRowid)
   db.prepare(
@@ -129,15 +128,25 @@ export function duplicateCollection(id: number): number {
   return newId
 }
 
+export function clearCollectionScenarios(id: number): void {
+  db.prepare('DELETE FROM scenarios WHERE collection_id = ?').run(id)
+}
+
 export function deleteCollection(id: number): void {
+  clearCollectionScenarios(id)
   db.prepare('DELETE FROM collections WHERE id = ?').run(id)
-  db.prepare('UPDATE scenarios SET collection_id = ? WHERE collection_id = ?').run(defaultCollectionId(), id)
 }
 
 export function importCollection(name: string, configs: TestDefinition[]): number {
-  const id = createCollection(name)
+  const id = createCollection(name, true)
   for (const cfg of configs) insertScenario(cfg, id)
   return id
+}
+
+export function replaceCollection(id: number, name: string, configs: TestDefinition[]): void {
+  db.prepare('UPDATE collections SET name = ?, is_imported = 1 WHERE id = ?').run(name, id)
+  db.prepare('DELETE FROM scenarios WHERE collection_id = ?').run(id)
+  for (const cfg of configs) insertScenario(cfg, id)
 }
 
 export function listScenarios(): Scenario[] {

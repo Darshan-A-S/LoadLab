@@ -139,7 +139,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     startedAt
   })
 
-  const opts: Record<string, unknown> = {
+  const opts = {
     url: config.target.url,
     concurrency: config.load.connections,
     maxSeconds: config.load.durationSeconds,
@@ -161,7 +161,7 @@ export function start(config: TestDefinition, runId: number, cb: EngineStartCall
     elapsedSeconds?: number
   }
 
-  loadTest(opts, (err: Error | null, rawResult?: unknown) => {
+  loadTest(opts as Parameters<typeof loadTest>[0], (err: Error | null, rawResult?: unknown) => {
     clearInterval(timer)
     activeRuns.delete(runId)
 

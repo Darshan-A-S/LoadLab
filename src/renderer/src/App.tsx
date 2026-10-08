@@ -7,6 +7,7 @@ import Collection from './components/Collection'
 import ComparePicker from './components/ComparePicker'
 import CompareRuns from './components/CompareRuns'
 import { ENGINE_DEFAULTS } from '@shared/types'
+import { getAvailableName } from '@shared/validation'
 import type {
   SampleEvent,
   ResultEvent,
@@ -15,8 +16,21 @@ import type {
   TestResult,
   Scenario,
   HistoryEntry,
-  Collection as CollectionDef
+  Collection as CollectionDef,
+  EngineType
 } from '@shared/types'
+
+interface CollisionState {
+  mode: 'import' | 'normal'
+  name: string
+  existingCollection: { id: number; name: string }
+  suggestedName: string
+  configs?: TestDefinition[]
+  skipped?: string[]
+  pendingTabId?: number | null
+  closeAfter?: boolean
+}
+
 
 interface EditorTab {
   kind: 'editor'
@@ -62,7 +76,6 @@ export default function App(): JSX.Element {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [maximized, setMaximized] = useState(false)
   const [closeProbe, setCloseProbe] = useState<number | null>(null)
-  const [detailRun, setDetailRun] = useState<HistoryEntry | null>(null)
   const [resultPopup, setResultPopup] = useState<{ runId: number; status: string; result: TestResult } | null>(null)
   const [comparePickerRun, setComparePickerRun] = useState<HistoryEntry | null>(null)
   const [compareModal, setCompareModal] = useState<{ runA: HistoryEntry; runB: HistoryEntry } | null>(null)
@@ -71,6 +84,10 @@ export default function App(): JSX.Element {
   const [deleteCollectionTarget, setDeleteCollectionTarget] = useState<{ id: number; name: string } | null>(null)
   const [newCollOpen, setNewCollOpen] = useState(false)
   const [newCollName, setNewCollName] = useState('')
+  const [saveToNewCollTarget, setSaveToNewCollTarget] = useState<{ tabId: number; closeAfter: boolean } | null>(null)
+  const [collisionData, setCollisionData] = useState<CollisionState | null>(null)
+  const [collisionChoice, setCollisionChoice] = useState<'replace' | 'new' | 'cancel'>('replace')
+  const [collisionNewName, setCollisionNewName] = useState('')
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     const n = Number(localStorage.getItem('sidebarWidth'))
     return Number.isFinite(n) && n >= 240 ? n : 240
@@ -106,7 +123,16 @@ export default function App(): JSX.Element {
   }, [])
 
   const refreshHistory = useCallback((): void => {
-    void window.loadlab.runs.list().then(setHistory)
+    void window.loadlab.runs.list().then((list) => {
+      setHistory(list)
+      setTabs((ts) =>
+        ts.map((t) => {
+          if (t.kind !== 'run') return t
+          const updated = list.find((h) => h.runId === t.run.runId)
+          return updated ? { ...t, run: updated } : t
+        })
+      )
+    })
   }, [])
 
   useEffect(() => {
@@ -126,7 +152,9 @@ export default function App(): JSX.Element {
       } else {
         const d = ev.data as Extract<RunEvent, { type: 'result' }>['data']
         if (d.result) {
-          const tab = tabs.find((t) => t.kind === 'editor' && t.running && t.running.runId === d.runId)
+          const tab = tabs.find(
+            (t): t is EditorTab => t.kind === 'editor' && t.running !== null && t.running.runId === d.runId
+          )
           if (tab && tab.draft.tags && tab.draft.tags.length && (!d.result.tags || !d.result.tags.length)) {
             d.result.tags = [tab.draft.tags[0]]
           }
@@ -197,10 +225,6 @@ export default function App(): JSX.Element {
   }, [tabs])
 
   const openHistory = useCallback((run: HistoryEntry): void => {
-    if (run.status === 'completed') {
-      setDetailRun(run)
-      return
-    }
     const existing = tabs.find((t) => t.kind === 'run' && t.run.runId === run.runId)
     if (existing) {
       setActiveId(existing.id)
@@ -210,6 +234,58 @@ export default function App(): JSX.Element {
     setTabs((ts) => [...ts, { kind: 'run', id, run }])
     setActiveId(id)
   }, [tabs])
+
+  const openRunInEditor = useCallback((run: HistoryEntry): void => {
+    // 1. If this run matches a saved scenario, open that scenario (or switch to its tab if already open)
+    const matchingScenario = scenarios.find(
+      (s) => s.name.trim().toLowerCase() === run.name.trim().toLowerCase()
+    )
+    if (matchingScenario) {
+      openScenario(matchingScenario)
+      return
+    }
+
+    // 2. If an editor tab with this test name or URL is already open, switch to it
+    const existingEditor = tabs.find(
+      (t): t is EditorTab =>
+        t.kind === 'editor' &&
+        ((t.draft.name.trim() && t.draft.name.trim().toLowerCase() === run.name.trim().toLowerCase()) ||
+          t.draft.target.url === run.target)
+    )
+    if (existingEditor) {
+      setActiveId(existingEditor.id)
+      return
+    }
+
+    // 3. Otherwise, open that test in a new editor tab (keeping original test name, no "(Copy)")
+    const id = nextTabId++
+    const draft: TestDefinition = {
+      name: run.name || 'Untitled Test',
+      target: { url: run.target, method: 'GET', headers: {}, body: '' },
+      load: {
+        connections: ENGINE_DEFAULTS[(run.engine as EngineType) || 'autocannon']?.connections ?? 50,
+        durationSeconds: run.result?.durationSec ?? 30,
+        pipelining: 1
+      },
+      engine: (run.engine as EngineType) || 'autocannon',
+      tags: run.tags ? [...run.tags] : []
+    }
+    setTabs((ts) => [
+      ...ts,
+      {
+        kind: 'editor',
+        id,
+        savedId: null,
+        collectionId: null,
+        draft,
+        base: JSON.stringify(draft),
+        running: null,
+        result: null,
+        error: null
+      }
+    ])
+    setActiveId(id)
+  }, [scenarios, tabs, openScenario])
 
   const closeTab = useCallback((id: number): void => {
     const t = tabs.find((x) => x.id === id)
@@ -246,8 +322,15 @@ export default function App(): JSX.Element {
   function saveActive(): void {
     const t = tabs.find((x): x is EditorTab => x.kind === 'editor' && x.id === activeId)
     if (!t) return
-    if (t.collectionId == null) setPickTarget({ tabId: t.id, closeAfter: false })
-    else saveTabTo(t.id, t.draft, t.collectionId)
+    if (t.collectionId == null) {
+      if (collections.length === 0) {
+        setSaveToNewCollTarget({ tabId: t.id, closeAfter: false })
+      } else {
+        setPickTarget({ tabId: t.id, closeAfter: false })
+      }
+    } else {
+      saveTabTo(t.id, t.draft, t.collectionId)
+    }
   }
 
   function runAgain(): void {
@@ -304,7 +387,6 @@ export default function App(): JSX.Element {
       setCompareModal({ runA: comparePickerRun, runB: candidate })
       setComparePickerRun(null)
       setResultPopup(null)
-      setDetailRun(null)
     },
     [comparePickerRun]
   )
@@ -351,7 +433,11 @@ export default function App(): JSX.Element {
       return
     }
     if (t.collectionId == null) {
-      setPickTarget({ tabId: closeProbe, closeAfter: true })
+      if (collections.length === 0) {
+        setSaveToNewCollTarget({ tabId: closeProbe, closeAfter: true })
+      } else {
+        setPickTarget({ tabId: closeProbe, closeAfter: true })
+      }
       setCloseProbe(null)
     } else {
       saveTabTo(closeProbe, t.draft, t.collectionId)
@@ -373,10 +459,82 @@ export default function App(): JSX.Element {
   async function createCollection(): Promise<void> {
     const name = newCollName.trim()
     if (!name) return
-    await window.loadlab.collections.create(name)
-    setNewCollName('')
-    setNewCollOpen(false)
-    refreshCollections()
+
+    const normalColls = collections.filter((c) => !c.isImported)
+    const existing = normalColls.find((c) => c.name.trim().toLowerCase() === name.toLowerCase())
+
+    if (existing) {
+      const suggestedName = getAvailableName(
+        name,
+        normalColls.map((c) => c.name)
+      )
+      setCollisionData({
+        mode: 'normal',
+        name,
+        existingCollection: { id: existing.id, name: existing.name },
+        suggestedName
+      })
+      setCollisionChoice('replace')
+      setCollisionNewName(suggestedName)
+      setNewCollOpen(false)
+      setNewCollName('')
+      return
+    }
+
+    try {
+      await window.loadlab.collections.create(name)
+      setNewCollName('')
+      setNewCollOpen(false)
+      refreshCollections()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function handleCreateAndSaveTab(): Promise<void> {
+    if (!saveToNewCollTarget) return
+    const name = newCollName.trim()
+    if (!name) return
+
+    const normalColls = collections.filter((c) => !c.isImported)
+    const existing = normalColls.find((c) => c.name.trim().toLowerCase() === name.toLowerCase())
+
+    if (existing) {
+      const suggestedName = getAvailableName(
+        name,
+        normalColls.map((c) => c.name)
+      )
+      setCollisionData({
+        mode: 'normal',
+        name,
+        existingCollection: { id: existing.id, name: existing.name },
+        suggestedName,
+        pendingTabId: saveToNewCollTarget.tabId,
+        closeAfter: saveToNewCollTarget.closeAfter
+      })
+      setCollisionChoice('replace')
+      setCollisionNewName(suggestedName)
+      setSaveToNewCollTarget(null)
+      setNewCollName('')
+      return
+    }
+
+    try {
+      const { id } = await window.loadlab.collections.create(name)
+      const tabId = saveToNewCollTarget.tabId
+      const shouldClose = saveToNewCollTarget.closeAfter
+      setSaveToNewCollTarget(null)
+      setNewCollName('')
+
+      const t = tabs.find((x): x is EditorTab => x.kind === 'editor' && x.id === tabId)
+      if (t) {
+        saveTabTo(tabId, t.draft, id)
+        if (shouldClose) doClose(tabId)
+      }
+      refreshCollections()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
+    }
   }
 
   const [renameColl, setRenameColl] = useState<CollectionDef | null>(null)
@@ -391,6 +549,13 @@ export default function App(): JSX.Element {
     if (!renameColl) return
     const name = renameName.trim()
     if (!name) { setRenameColl(null); return }
+    const sameSection = collections.filter(
+      (c) => c.id !== renameColl.id && Boolean(c.isImported) === Boolean(renameColl.isImported)
+    )
+    if (sameSection.some((c) => c.name.trim().toLowerCase() === name.toLowerCase())) {
+      alert(`A collection named "${name}" already exists in this section.`)
+      return
+    }
     await window.loadlab.collections.rename(renameColl.id, name)
     setRenameColl(null)
     refreshCollections()
@@ -411,6 +576,19 @@ export default function App(): JSX.Element {
       .import()
       .then((res) => {
         if (!res) return
+        if (res.status === 'collision') {
+          setCollisionData({
+            mode: 'import',
+            name: res.name,
+            existingCollection: res.existingCollection,
+            suggestedName: res.suggestedName,
+            configs: res.configs,
+            skipped: res.skipped
+          })
+          setCollisionChoice('replace')
+          setCollisionNewName(res.suggestedName)
+          return
+        }
         refreshCollections()
         refreshScenarios()
         if (res.skipped.length > 0) {
@@ -418,6 +596,77 @@ export default function App(): JSX.Element {
         }
       })
       .catch((err) => alert(err instanceof Error ? err.message : String(err)))
+  }
+
+  async function handleConfirmCollision(): Promise<void> {
+    if (!collisionData) return
+    const { mode, name, existingCollection, suggestedName, configs, skipped, pendingTabId, closeAfter } = collisionData
+    setCollisionData(null)
+
+    if (collisionChoice === 'cancel') {
+      return
+    }
+
+    if (mode === 'import') {
+      if (!configs) return
+      if (collisionChoice === 'replace') {
+        try {
+          const res = await window.loadlab.collections.replace(existingCollection.id, name, configs)
+          refreshCollections()
+          refreshScenarios()
+          if (skipped && skipped.length > 0) {
+            alert(`Imported ${res.imported} scenarios into "${res.name}".\nSkipped: ${skipped.join(', ')}`)
+          }
+        } catch (err) {
+          alert(err instanceof Error ? err.message : String(err))
+        }
+      } else if (collisionChoice === 'new') {
+        const finalName = collisionNewName.trim() || suggestedName
+        try {
+          const res = await window.loadlab.collections.createImported(finalName, configs)
+          refreshCollections()
+          refreshScenarios()
+          if (skipped && skipped.length > 0) {
+            alert(`Imported ${res.imported} scenarios into "${res.name}".\nSkipped: ${skipped.join(', ')}`)
+          }
+        } catch (err) {
+          alert(err instanceof Error ? err.message : String(err))
+        }
+      }
+    } else {
+      // mode === 'normal'
+      if (collisionChoice === 'replace') {
+        try {
+          await window.loadlab.collections.clearScenarios(existingCollection.id)
+          if (pendingTabId != null) {
+            const t = tabs.find((x): x is EditorTab => x.kind === 'editor' && x.id === pendingTabId)
+            if (t) {
+              saveTabTo(pendingTabId, t.draft, existingCollection.id)
+              if (closeAfter) doClose(pendingTabId)
+            }
+          }
+          refreshCollections()
+          refreshScenarios()
+        } catch (err) {
+          alert(err instanceof Error ? err.message : String(err))
+        }
+      } else if (collisionChoice === 'new') {
+        const finalName = collisionNewName.trim() || suggestedName
+        try {
+          const { id } = await window.loadlab.collections.create(finalName)
+          if (pendingTabId != null) {
+            const t = tabs.find((x): x is EditorTab => x.kind === 'editor' && x.id === pendingTabId)
+            if (t) {
+              saveTabTo(pendingTabId, t.draft, id)
+              if (closeAfter) doClose(pendingTabId)
+            }
+          }
+          refreshCollections()
+        } catch (err) {
+          alert(err instanceof Error ? err.message : String(err))
+        }
+      }
+    }
   }
 
   function promptDeleteCollection(id: number): void {
@@ -429,7 +678,10 @@ export default function App(): JSX.Element {
     if (!deleteCollectionTarget) return
     const id = deleteCollectionTarget.id
     setDeleteCollectionTarget(null)
-    void window.loadlab.collections.delete(id).then(refreshCollections)
+    void window.loadlab.collections.delete(id).then(() => {
+      refreshCollections()
+      refreshScenarios()
+    })
   }
 
   function promptDeleteScenario(id: number): void {
@@ -451,7 +703,7 @@ export default function App(): JSX.Element {
 
   function tabLabel(t: Tab): string {
     if (t.kind === 'editor') return t.draft.name.trim() || 'Untitled'
-    return t.run.name || 'Run'
+    return `#${t.run.runId} ${t.run.name || 'Run'}`
   }
 
   return (
@@ -515,13 +767,29 @@ export default function App(): JSX.Element {
                 key={t.id}
                 className={t.id === activeId ? 'active' : ''}
                 onClick={() => setActiveId(t.id)}
+                title={
+                  t.kind === 'editor'
+                    ? t.draft.name.trim() || 'Untitled Test'
+                    : `Run #${t.run.runId}: ${t.run.name || 'Run'}`
+                }
                 onAuxClick={(e) => {
                   if (e.button === 1) closeTab(t.id)
                 }}
               >
                 <span className="gtab-name">
                   {t.kind === 'editor' && t.running && <span className="gtab-dot" />}
-                  {tabLabel(t)}
+                  {t.kind === 'run' && (
+                    <span
+                      className={`gtab-run-dot ${
+                        t.run.status === 'completed'
+                          ? 'dot-ok'
+                          : t.run.status === 'stopped'
+                            ? 'dot-warn'
+                            : 'dot-bad'
+                      }`}
+                    />
+                  )}
+                  <span className="gtab-text">{tabLabel(t)}</span>
                 </span>
                 <span
                   className="gtab-close"
@@ -576,6 +844,8 @@ export default function App(): JSX.Element {
             ) : activeTab.kind === 'run' ? (
               <RunDetail
                 run={activeTab.run}
+                onCompare={(run) => startCompare(run)}
+                onOpenInEditor={openRunInEditor}
                 onTagsChange={(tags) => {
                   setTabs((ts) =>
                     ts.map((t) => (t.id === activeTab.id && t.kind === 'run' ? { ...t, run: { ...t.run, tags } } : t))
@@ -638,11 +908,17 @@ export default function App(): JSX.Element {
             ? `Running run #${activeTab.running.runId}`
             : activeTab?.kind === 'editor' && activeTab.result
               ? `Run #${activeTab.result.runId} ${activeTab.result.status}`
-              : 'Ready'}
+              : activeTab?.kind === 'run'
+                ? `Run #${activeTab.run.runId} (${activeTab.run.status})`
+                : 'Ready'}
         </span>
         <span className="grow" />
         <span className="status-right" style={{ textTransform: 'capitalize' }}>
-          {activeTab?.kind === 'editor' ? activeTab.draft.engine : 'LoadLab'}
+          {activeTab?.kind === 'editor'
+            ? activeTab.draft.engine
+            : activeTab?.kind === 'run'
+              ? activeTab.run.engine
+              : 'LoadLab'}
         </span>
       </div>
 
@@ -666,15 +942,50 @@ export default function App(): JSX.Element {
             <div className="picker-list">
               {collections.map((c) => (
                 <button key={c.id} onClick={() => handlePickCollection(c.id)}>
-                  {c.name}
+                  <span>{c.name}</span>
+                  {c.isImported && <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 6 }}>(Imported)</span>}
                 </button>
               ))}
-              <button className="picker-new" onClick={() => setNewCollOpen(true)}>
+              <button
+                className="picker-new"
+                onClick={() => {
+                  if (pickTarget) {
+                    setSaveToNewCollTarget({ tabId: pickTarget.tabId, closeAfter: pickTarget.closeAfter })
+                    setPickTarget(null)
+                  }
+                }}
+              >
                 + New Collection
               </button>
             </div>
             <div className="actions">
               <button onClick={() => setPickTarget(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {saveToNewCollTarget && (
+        <div className="modal-backdrop" onClick={() => { setSaveToNewCollTarget(null); setNewCollName('') }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: '0 0 8px 0', fontSize: 13.5, fontWeight: 600 }}>Create Collection</p>
+            <p className="muted" style={{ margin: '0 0 12px 0', fontSize: 12 }}>
+              Create a collection to save your test:
+            </p>
+            <input
+              autoFocus
+              value={newCollName}
+              placeholder="Collection name"
+              onChange={(e) => setNewCollName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleCreateAndSaveTab()
+              }}
+            />
+            <div className="actions">
+              <button onClick={() => { setSaveToNewCollTarget(null); setNewCollName('') }}>Cancel</button>
+              <button className="primary" onClick={() => void handleCreateAndSaveTab()}>
+                Create & Save
+              </button>
             </div>
           </div>
         </div>
@@ -751,23 +1062,6 @@ export default function App(): JSX.Element {
         </div>
       )}
 
-      {detailRun && (
-        <div className="modal-backdrop" onClick={() => setDetailRun(null)}>
-          <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
-            <RunDetail
-              run={detailRun}
-              onCompare={(run) => startCompare(run)}
-              onTagsChange={(tags) => {
-                setDetailRun((prev) => (prev ? { ...prev, tags } : null))
-                refreshHistory()
-              }}
-            />
-            <div className="actions">
-              <button className="primary" onClick={() => setDetailRun(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {comparePickerRun && (
         <ComparePicker
@@ -824,13 +1118,98 @@ export default function App(): JSX.Element {
               Delete Collection?
             </p>
             <p className="muted" style={{ margin: '0 0 14px 0', fontSize: 12.5, lineHeight: 1.4 }}>
-              Are you sure you want to delete collection <strong>&quot;{deleteCollectionTarget.name}&quot;</strong>? Tests in this collection will be moved to the default collection.
+              Are you sure you want to delete collection <strong>&quot;{deleteCollectionTarget.name}&quot;</strong>? Tests in this collection will also be deleted.
             </p>
             <div className="actions">
               <button onClick={() => setDeleteCollectionTarget(null)}>Cancel</button>
               <button className="danger" onClick={confirmDeleteCollection}>
                 Delete Collection
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {collisionData && (
+        <div className="modal-backdrop" onClick={() => setCollisionData(null)}>
+          <div className="modal modal-collision" onClick={(e) => e.stopPropagation()}>
+            <div className="collision-header">
+              <p className="collision-title">
+                A collection named &quot;{collisionData.name}&quot; already exists.
+              </p>
+            </div>
+
+            <div className="collision-options">
+              <label className={`collision-option ${collisionChoice === 'replace' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="collisionAction"
+                  value="replace"
+                  checked={collisionChoice === 'replace'}
+                  onChange={() => setCollisionChoice('replace')}
+                />
+                <div className="collision-option-content">
+                  <div className="collision-option-label">Replace existing collection</div>
+                </div>
+              </label>
+
+              <label className={`collision-option ${collisionChoice === 'new' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="collisionAction"
+                  value="new"
+                  checked={collisionChoice === 'new'}
+                  onChange={() => setCollisionChoice('new')}
+                />
+                <div className="collision-option-content">
+                  <div className="collision-option-label">
+                    {collisionData.mode === 'import' ? 'Import as a new collection' : 'Create as a new collection'}
+                  </div>
+                  {collisionChoice === 'new' && (
+                    <div className="collision-input-wrap" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={collisionNewName}
+                        onChange={(e) => setCollisionNewName(e.target.value)}
+                        placeholder="Collection name"
+                        className="collision-name-input"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void handleConfirmCollision()
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              <label className={`collision-option ${collisionChoice === 'cancel' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="collisionAction"
+                  value="cancel"
+                  checked={collisionChoice === 'cancel'}
+                  onChange={() => setCollisionChoice('cancel')}
+                />
+                <div className="collision-option-content">
+                  <div className="collision-option-label">Cancel</div>
+                </div>
+              </label>
+            </div>
+
+            <div className="actions">
+              <button onClick={() => setCollisionData(null)}>Cancel</button>
+              {collisionChoice === 'cancel' ? (
+                <button onClick={() => setCollisionData(null)}>Dismiss</button>
+              ) : collisionChoice === 'replace' ? (
+                <button className="primary" onClick={() => void handleConfirmCollision()}>
+                  Replace Collection
+                </button>
+              ) : (
+                <button className="primary" onClick={() => void handleConfirmCollision()}>
+                  {collisionData.mode === 'import' ? 'Import Collection' : 'Create Collection'}
+                </button>
+              )}
             </div>
           </div>
         </div>

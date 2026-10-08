@@ -42,6 +42,7 @@ export default function Collection({
   const [panel, setPanel] = useState<Panel>('saved')
   const [query, setQuery] = useState('')
   const [collectionsOpen, setCollectionsOpen] = useState(true)
+  const [importedCollectionsOpen, setImportedCollectionsOpen] = useState(true)
   const [openColls, setOpenColls] = useState<Record<number, boolean>>({})
   const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(null)
 
@@ -65,16 +66,84 @@ export default function Collection({
       )
     : history
 
-  const grouped = collections
+  const regularGrouped = collections
+    .filter((c) => !c.isImported)
     .map((c) => ({
       collection: c,
       items: saved.filter((s) => s.collectionId === c.id)
     }))
-    .sort((a, b) => {
-      const aDef = a.collection.name.toLowerCase() === 'my collection' ? 0 : 1
-      const bDef = b.collection.name.toLowerCase() === 'my collection' ? 0 : 1
-      return aDef - bDef || a.collection.name.localeCompare(b.collection.name)
-    })
+    .filter(({ collection, items }) => !q || collection.name.toLowerCase().includes(q) || items.length > 0)
+    .sort((a, b) => a.collection.name.localeCompare(b.collection.name))
+
+  const importedGrouped = collections
+    .filter((c) => Boolean(c.isImported))
+    .map((c) => ({
+      collection: c,
+      items: saved.filter((s) => s.collectionId === c.id)
+    }))
+    .filter(({ collection, items }) => !q || collection.name.toLowerCase().includes(q) || items.length > 0)
+    .sort((a, b) => a.collection.name.localeCompare(b.collection.name))
+
+  const renderCollectionGroup = (collection: Coll, items: Scenario[]): JSX.Element => (
+    <div key={collection.id} className="collection-group">
+      <div className="collection-head">
+        <button className="collection-collapse" onClick={() => toggleColl(collection.id)}>
+          <ChevronRight size={12} className={`collection-chev ${openColls[collection.id] ?? true ? 'open' : ''}`} />
+          <span className="collection-head-name">{collection.name}</span>
+        </button>
+        <div className="collection-head-actions">
+          <button
+            className="collection-head-add"
+            title="New test in collection"
+            onClick={(e) => {
+              e.stopPropagation()
+              onNewInCollection(collection.id)
+            }}
+          >
+            <Plus size={13} />
+          </button>
+          <div className="collection-menu">
+            <button
+              className="collection-head-add"
+              title="Collection actions"
+              onClick={(e) => openMenu(e, collection.id)}
+            >
+              <Ellipsis size={14} />
+            </button>
+            {menu && menu.id === collection.id && (
+              <>
+                <div className="collection-menu-backdrop" onClick={() => setMenu(null)} />
+                <div className="collection-menu-pop" style={{ left: menu.x, top: menu.y }}>
+                  <button onClick={() => { setMenu(null); onNewInCollection(collection.id) }}>
+                    New test
+                  </button>
+                  <button onClick={() => { setMenu(null); onRenameCollection(collection) }}>
+                    Rename
+                  </button>
+                  <button onClick={() => { setMenu(null); onDuplicateCollection(collection.id) }}>
+                    Duplicate
+                  </button>
+                  <button onClick={() => { setMenu(null); onExportCollection(collection.id) }}>
+                    Export
+                  </button>
+                  <button
+                    onClick={() => { setMenu(null); onDeleteCollection(collection.id) }}
+                    className="danger"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      {(openColls[collection.id] ?? true) &&
+        items.map((s) => (
+          <ScenarioItem key={s.id} s={s} onOpen={onOpenScenario} onDelete={onDeleteScenario} />
+        ))}
+    </div>
+  )
 
   return (
     <aside className="collection">
@@ -98,7 +167,12 @@ export default function Collection({
 
       {panel === 'saved' ? (
         <div className="collection-section">
-          {saved.length === 0 && <div className="collection-empty">{q ? 'No matches' : 'Nothing saved yet'}</div>}
+          {q && regularGrouped.length === 0 && importedGrouped.length === 0 && (
+            <div className="collection-empty">No matches</div>
+          )}
+          {!q && collections.length === 0 && saved.length === 0 && (
+            <div className="collection-empty">Nothing saved yet</div>
+          )}
           <div className="collection-collapse-row">
             <button className="collection-collapse" onClick={() => setCollectionsOpen((o) => !o)}>
               <ChevronsRight size={12} className={`collection-chev ${collectionsOpen ? 'open' : ''}`} />
@@ -110,66 +184,28 @@ export default function Collection({
           </div>
           {collectionsOpen && (
             <div className="collection-groups">
-              {grouped.map(({ collection, items }) => (
-                <div key={collection.id} className="collection-group">
-                  <div className="collection-head">
-                    <button className="collection-collapse" onClick={() => toggleColl(collection.id)}>
-                      <ChevronRight size={12} className={`collection-chev ${openColls[collection.id] ?? true ? 'open' : ''}`} />
-                      <span className="collection-head-name">{collection.name}</span>
-                    </button>
-                    <div className="collection-head-actions">
-                      <button
-                        className="collection-head-add"
-                        title="New test in collection"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onNewInCollection(collection.id)
-                        }}
-                      >
-                        <Plus size={13} />
-                      </button>
-                      <div className="collection-menu">
-                        <button
-                          className="collection-head-add"
-                          title="Collection actions"
-                          onClick={(e) => openMenu(e, collection.id)}
-                        >
-                          <Ellipsis size={14} />
-                        </button>
-                        {menu && menu.id === collection.id && (
-                        <>
-                          <div className="collection-menu-backdrop" onClick={() => setMenu(null)} />
-                          <div className="collection-menu-pop" style={{ left: menu.x, top: menu.y }}>
-                          <button onClick={() => { setMenu(null); onNewInCollection(collection.id) }}>
-                            New test
-                          </button>
-                          <button onClick={() => { setMenu(null); onRenameCollection(collection) }}>
-                            Rename
-                          </button>
-                          <button onClick={() => { setMenu(null); onDuplicateCollection(collection.id) }}>
-                            Duplicate
-                          </button>
-                          <button onClick={() => { setMenu(null); onExportCollection(collection.id) }}>
-                            Export
-                          </button>
-                          <button
-                            onClick={() => { setMenu(null); onDeleteCollection(collection.id) }}
-                            className="danger"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                  {(openColls[collection.id] ?? true) &&
-                    items.map((s) => (
-                      <ScenarioItem key={s.id} s={s} onOpen={onOpenScenario} onDelete={onDeleteScenario} />
-                    ))}
-                </div>
-              ))}
+              {regularGrouped.length === 0 && (
+                <div className="collection-empty-sub">{q ? 'No matching collections' : 'No collections'}</div>
+              )}
+              {regularGrouped.map(({ collection, items }) => renderCollectionGroup(collection, items))}
+            </div>
+          )}
+
+          <div className="collection-collapse-row" style={{ marginTop: 12 }}>
+            <button className="collection-collapse" onClick={() => setImportedCollectionsOpen((o) => !o)}>
+              <ChevronsRight size={12} className={`collection-chev ${importedCollectionsOpen ? 'open' : ''}`} />
+              Imported Collections
+            </button>
+            <button className="collection-head-add collection-collapse-add" title="Import Collection" onClick={onImportCollection}>
+              <FolderDown size={13} />
+            </button>
+          </div>
+          {importedCollectionsOpen && (
+            <div className="collection-groups">
+              {importedGrouped.length === 0 && (
+                <div className="collection-empty-sub">{q ? 'No matching imported collections' : 'No imported collections'}</div>
+              )}
+              {importedGrouped.map(({ collection, items }) => renderCollectionGroup(collection, items))}
             </div>
           )}
         </div>

@@ -93,7 +93,7 @@ export default function ResultCard({ result, status, onRunAgain, onCompare, onTa
         </button>
         {onCompare && (
           <button onClick={onCompare} title="Compare this run against another run">
-            Compare...
+            Compare
           </button>
         )}
         <button onClick={() => void window.loadlab.runs.export(result.runId, 'json')}>Export JSON</button>
