@@ -1147,15 +1147,7 @@ html, body {
   .main-content {
     grid-template-columns: 1fr;
     gap: 28px;
-    padding: 20px 0;
-  }
-
-  .preview-section {
-    order: -1;
-  }
-
-  .download-buttons-grid {
-    grid-template-columns: 1fr;
+    padding: 16px 0;
   }
 
   .app-footer {
@@ -1164,6 +1156,44 @@ html, body {
     gap: 8px;
     padding: 16px 0;
     text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-nav {
+    height: auto;
+    padding-bottom: 8px;
+    gap: 8px;
+  }
+
+  .downloads-label {
+    display: none;
+  }
+
+  .github-btn span {
+    display: none;
+  }
+
+  .github-btn {
+    padding: 6px 10px;
+  }
+
+  .hero-title {
+    font-size: 1.85rem;
+  }
+
+  .features-quad {
+    grid-template-columns: 1fr;
+  }
+
+  .simulator-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .engine-tabs-group {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
