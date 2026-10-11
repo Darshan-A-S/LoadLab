@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoadLab — Local-First HTTP Load Testing for Developers</title>
+  
+  <!-- Social & OpenGraph Meta Tags -->
+  <meta name="description" content="Local-first HTTP load testing desktop app for developers. Benchmark localhost, Docker containers, and APIs directly from your machine with zero tunnels and zero telemetry.">
+  <meta property="og:title" content="LoadLab — Local-First HTTP Load Testing for Developers">
+  <meta property="og:description" content="Benchmark localhost, Docker containers, and APIs directly from your machine with zero tunnels, zero cloud fees, and multi-engine support.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="./assets/icon.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0d0e12">
+
+  <link rel="icon" type="image/png" href="./assets/icon-small.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- Ambient background glows -->
+  <div class="ambient-glow glow-top-left"></div>
+  <div class="ambient-glow glow-bottom-right"></div>
+  <div class="grid-overlay"></div>
+
+  <!-- Main viewport container: strictly 100vh full-width single page -->
+  <div class="app-viewport">
+    
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <a href="#" class="brand-link">
+          <img src="./assets/icon.png" alt="LoadLab Logo" class="brand-logo" width="32" height="32">
+          <span class="brand-name">LoadLab</span>
+        </a>
+        <span class="version-tag">
+          <span class="pulse-dot"></span>
+          v0.1.3
+        </span>
+      </div>
+
+      <div class="nav-right">
+        <!-- Live Total Downloads Pill -->
+        <div class="downloads-pill" id="downloadsPill" title="Real-time downloads tracked across all versions">
+          <span class="download-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </span>
+          <span class="downloads-label">Total Downloads:</span>
+          <span class="downloads-count" id="totalDownloadsCount">Calculating...</span>
+          <span class="live-dot" title="Live Synced"></span>
+        </div>
+
+        <!-- GitHub Stars Button -->
+        <a href="https://github.com/Darshan-A-S/LoadLab" target="_blank" rel="noopener noreferrer" class="nav-btn github-btn" title="View Source on GitHub">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>Star on GitHub</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Content Area: Left Hero + Right Interactive Preview -->
+    <main class="main-content">
+      
+      <!-- LEFT COLUMN: Hero Content & 3 OS Download Buttons -->
+      <section class="hero-section">
+        <div class="hero-badge">
+          <span>Zero cloud lock-in &bull; Zero tunnels &bull; 100% Localhost</span>
+        </div>
+
+        <h1 class="hero-title">
+          Local-first HTTP load testing for <span class="gradient-text">developers</span>.
+        </h1>
+
+        <p class="hero-subtitle">
+          Benchmark <code>localhost</code>, Docker, and APIs directly from your machine.<br>
+          Zero cloud tunnels, zero setup, and maximum local speed.
+        </p>
+
+                <!-- DOWNLOAD SECTION: 3 Dedicated Buttons (Windows, macOS, Linux) -->
+        <div class="download-block">
+          <div class="download-header">
+            <span class="download-heading">Choose Your Operating System</span>
+          </div>
+
+          <div class="download-buttons-grid">
+            
+            <!-- 1. WINDOWS BUTTON -->
+            <a href="https://github.com/Darshan-A-S/LoadLab/releases/download/v0.1.3/LoadLab.Setup.0.1.3.exe" 
+               class="download-card win-card os-icon-btn" 
+               id="btnDownloadWin"
+               data-os="windows"
+               title="Download for Windows (x64 .exe)"
+               download>
+              <img src="./assets/windows.svg" alt="Windows" class="os-icon-img">
+            </a>
+
+            <!-- 2. MACOS BUTTON -->
+            <a href="https://github.com/Darshan-A-S/LoadLab/releases/latest" 
+               class="download-card mac-card os-icon-btn" 
+               id="btnDownloadMac"
+               data-os="mac"
+               title="Download for macOS">
+              <img src="./assets/apple.svg" alt="macOS" class="os-icon-img">
+            </a>
+
+            <!-- 3. LINUX BUTTON -->
+            <a href="https://github.com/Darshan-A-S/LoadLab/releases/latest" 
+               class="download-card linux-card os-icon-btn" 
+               id="btnDownloadLinux"
+               data-os="linux"
+               title="Download for Linux">
+              <img src="./assets/linux.svg" alt="Linux" class="os-icon-img">
+            </a>
+
+          </div>
+
+          <!-- Bottom Micro Assurance -->
+          <div class="download-footnote">
+            <span class="footnote-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              MIT License
+            </span>
+            <span class="footnote-separator">&bull;</span>
+            <span class="footnote-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              Offline Ready
+            </span>
+            <span class="footnote-separator">&bull;</span>
+            <span class="footnote-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              No Account Required
+            </span>
+            <span class="footnote-separator">&bull;</span>
+            <span class="footnote-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              Direct Local Download
+            </span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT COLUMN: Hyper-Realistic Live LoadLab Desktop Simulator -->
+      <section class="preview-section">
+        <div class="simulator-window">
+          
+          <!-- Window Titlebar -->
+          <div class="window-titlebar">
+            <div class="window-controls">
+              <span class="win-dot dot-close"></span>
+              <span class="win-dot dot-min"></span>
+              <span class="win-dot dot-max"></span>
+            </div>
+            <div class="window-tab">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Bench: http://localhost:3000/api/v1/bench</span>
+              <span class="status-live-pill">LIVE</span>
+            </div>
+            <div class="window-actions">
+              <span class="engine-indicator" id="activeEngineIndicator">Autocannon (Node.js)</span>
+            </div>
+          </div>
+
+          <!-- Simulator Header & Test Configuration Bar -->
+          <div class="simulator-config-bar">
+            <div class="method-tag">GET</div>
+            <div class="url-input-mock">http://localhost:3000/api/v1/bench</div>
+            
+            <div class="config-pill">
+              <span class="config-lbl">Connections:</span>
+              <span class="config-val">100</span>
+            </div>
+            <div class="config-pill">
+              <span class="config-lbl">Duration:</span>
+              <span class="config-val">30s</span>
+            </div>
+
+            <!-- Interactive Run / Pause Simulator Button -->
+            <button class="sim-run-btn" id="simToggleBtn" title="Click to Pause / Resume simulation">
+              <span class="btn-indicator-dot"></span>
+              <span id="simBtnText">RUNNING</span>
+            </button>
+          </div>
+
+          <!-- Live Metrics Banner -->
+          <div class="simulator-metrics-grid">
+            <div class="metric-card card-rps">
+              <div class="metric-top">
+                <span class="metric-name">Throughput (RPS)</span>
+                <span class="metric-spark-label">+12.4% peak</span>
+              </div>
+              <div class="metric-val" id="metricRps">16,420</div>
+              <div class="metric-sub">req / sec &bull; 0 drops</div>
+            </div>
+
+            <div class="metric-card card-latency">
+              <div class="metric-top">
+                <span class="metric-name">Avg Latency</span>
+                <span class="metric-badge-ok">Optimal</span>
+              </div>
+              <div class="metric-val" id="metricLatency">2.8 <span class="metric-unit">ms</span></div>
+              <div class="metric-sub">Min: 1.1ms &bull; Max: 14.2ms</div>
+            </div>
+
+            <div class="metric-card card-percentiles">
+              <div class="metric-top">
+                <span class="metric-name">Percentiles</span>
+              </div>
+              <div class="percentile-rows">
+                <div class="p-row"><span>p50:</span> <strong id="valP50">2.1ms</strong></div>
+                <div class="p-row"><span>p95:</span> <strong id="valP95">5.6ms</strong></div>
+                <div class="p-row"><span>p99:</span> <strong id="valP99">11.4ms</strong></div>
+              </div>
+            </div>
+
+            <div class="metric-card card-status">
+              <div class="metric-top">
+                <span class="metric-name">Status Codes</span>
+                <span class="metric-badge-200">200 OK</span>
+              </div>
+              <div class="metric-val status-val" id="metricTotalReqs">492,600</div>
+              <div class="metric-sub success-rate"><span class="check-mark">✓</span> 100.0% Success Rate</div>
+            </div>
+          </div>
+
+          <!-- Live Animated Canvas Graph -->
+          <div class="simulator-chart-container">
+            <div class="chart-header">
+              <div class="chart-legend">
+                <span class="legend-dot rps-dot"></span>
+                <span>Real-Time RPS Telemetry Stream</span>
+                <span class="legend-dot latency-dot"></span>
+                <span>Latency (p95)</span>
+              </div>
+              <div class="chart-rate" id="streamFps">60 FPS &bull; Low CPU Overhead</div>
+            </div>
+            
+            <div class="canvas-wrapper">
+              <canvas id="liveTelemetryCanvas" width="620" height="150"></canvas>
+            </div>
+          </div>
+
+          <!-- Bottom Engine Selector & Architecture Footprint -->
+          <div class="simulator-footer">
+            <div class="engine-tabs-group">
+              <span class="engine-group-label">Pluggable Engines:</span>
+              <button class="engine-tab active" data-engine="autocannon">Autocannon (Node)</button>
+              <button class="engine-tab" data-engine="oha">oha (Rust)</button>
+              <button class="engine-tab" data-engine="bombardier">Bombardier (Go)</button>
+              <button class="engine-tab" data-engine="artillery">Artillery</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Status Bar (Zero vertical scroll, neat anchor footer) -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span>🔒 Traffic is 100% direct from your local CPU &bull; Zero remote servers &bull; Zero cloud fees</span>
+      </div>
+
+      <div class="footer-right">
+        <a href="https://github.com/Darshan-A-S/LoadLab" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub Repository</a>
+        <span class="footer-divider">&bull;</span>
+        <a href="https://github.com/Darshan-A-S/LoadLab/releases" target="_blank" rel="noopener noreferrer" class="footer-link">Releases</a>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Modal for macOS / Linux instructions when clicked -->
+  <div class="modal-backdrop" id="downloadModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Download LoadLab</div>
+        <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Injected via JS -->
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="modal-action-btn primary" id="modalActionBtn" target="_blank">Proceed to GitHub Releases</a>
+        <button class="modal-action-btn secondary" id="modalDismissBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

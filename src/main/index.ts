@@ -5,6 +5,7 @@ import { initDb, insertScenario, listScenarios, deleteScenario, updateScenarioTa
 import { startTest, stopTest, activeRunIds } from './runner'
 import { renderJSON, renderCSV } from './export'
 import { validate, getAvailableName } from '../shared/validation'
+import icon from '../../resources/icon.png?asset'
 import type { TestDefinition, ImportResult } from '../shared/types'
 import type { HistoryEntry } from '../shared/types'
 
@@ -16,6 +17,7 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     title: 'LoadLab',
     titleBarStyle: 'hidden',
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
