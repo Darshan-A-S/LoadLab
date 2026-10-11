@@ -97,7 +97,7 @@ html, body {
 .app-viewport {
   position: relative;
   z-index: 2;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -1133,21 +1133,43 @@ html, body {
    --------------------------------------------------------------------- */
 @media (max-width: 980px) {
   html, body {
+    overflow-x: hidden;
     overflow-y: auto;
     height: auto;
     min-height: 100%;
+    width: 100%;
   }
 
   .app-viewport {
     height: auto;
     min-height: 100vh;
-    padding: 16px 20px;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    padding: 16px 16px 24px 16px;
   }
 
   .main-content {
     grid-template-columns: 1fr;
-    gap: 28px;
-    padding: 16px 0;
+    gap: 24px;
+    padding: 12px 0 20px 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .hero-section {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .preview-section {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .simulator-window {
+    width: 100%;
+    max-width: 100%;
   }
 
   .app-footer {
@@ -1156,14 +1178,18 @@ html, body {
     gap: 8px;
     padding: 16px 0;
     text-align: center;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 640px) {
   .top-nav {
     height: auto;
-    padding-bottom: 8px;
+    padding: 4px 0 10px 0;
+    flex-wrap: wrap;
     gap: 8px;
+    width: 100%;
   }
 
   .downloads-label {
@@ -1178,22 +1204,137 @@ html, body {
     padding: 6px 10px;
   }
 
+  .version-tag {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+  }
+
   .hero-title {
-    font-size: 1.85rem;
+    font-size: clamp(1.75rem, 6.5vw, 2.2rem);
+    line-height: 1.15;
+  }
+
+  .hero-subtitle {
+    font-size: 0.88rem;
+    line-height: 1.48;
+    max-width: 100%;
   }
 
   .features-quad {
     grid-template-columns: 1fr;
+    gap: 6px;
+    max-width: 100%;
+  }
+
+  .download-buttons-grid {
+    gap: 12px;
+  }
+
+  .download-card.os-icon-btn {
+    width: 68px;
+    height: 58px;
+    min-height: 58px;
+  }
+
+  .os-icon-img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .download-footnote {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .window-titlebar {
+    padding: 0 10px;
+    height: 34px;
+  }
+
+  .engine-indicator {
+    display: none;
+  }
+
+  .window-tab {
+    padding: 3px 8px;
+    font-size: 0.68rem;
+  }
+
+  .simulator-config-bar {
+    padding: 8px 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .url-input-mock {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+    min-width: 120px;
+  }
+
+  .config-pill {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+
+  .sim-run-btn {
+    padding: 4px 10px;
+    font-size: 0.68rem;
+    margin-left: auto;
   }
 
   .simulator-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .metric-card {
+    padding: 6px 8px;
+  }
+
+  .metric-val {
+    font-size: 1.1rem;
+  }
+
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .chart-rate {
+    font-size: 0.62rem;
+  }
+
+  .canvas-wrapper {
+    height: 105px;
+  }
+
+  .simulator-footer {
+    padding: 8px 10px;
   }
 
   .engine-tabs-group {
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    width: 100%;
+  }
+
+  .engine-group-label {
+    grid-column: 1 / -1;
+    margin-bottom: 2px;
+  }
+
+  .engine-tab {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    white-space: normal;
+  }
+
+  .footer-left span {
+    font-size: 0.68rem;
   }
 }
 
