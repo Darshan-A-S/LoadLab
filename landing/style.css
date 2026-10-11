@@ -115,6 +115,9 @@ html, body {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
 .nav-left {
@@ -274,10 +277,14 @@ html, body {
 .main-content {
   flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(420px, 1fr) minmax(480px, 1.15fr);
   gap: clamp(18px, 3.2vw, 42px);
   align-items: center;
+  justify-content: center;
   padding: clamp(6px, 1.2vh, 18px) 0;
 }
 
@@ -931,6 +938,9 @@ html, body {
   border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
   padding-top: 4px;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
 .footer-left {
