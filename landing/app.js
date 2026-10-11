@@ -113,6 +113,19 @@
               });
             }
           });
+
+          // Automatically sync download buttons with latest release asset links
+          const latestRelease = releases[0];
+          if (latestRelease && Array.isArray(latestRelease.assets)) {
+            const winAsset = latestRelease.assets.find(a => a.name.endsWith('.exe'));
+            const macAsset = latestRelease.assets.find(a => a.name.endsWith('.dmg'));
+            const linuxAsset = latestRelease.assets.find(a => a.name.endsWith('.AppImage'));
+
+            if (winAsset && btnDownloadWin) btnDownloadWin.href = winAsset.browser_download_url;
+            if (macAsset && btnDownloadMac) btnDownloadMac.href = macAsset.browser_download_url;
+            if (linuxAsset && btnDownloadLinux) btnDownloadLinux.href = linuxAsset.browser_download_url;
+          }
+
           fetchSuccessful = true;
           localStorage.setItem('loadlab_cached_real_downloads', githubDownloads.toString());
         }
