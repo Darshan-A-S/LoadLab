@@ -1,7 +1,8 @@
 {
   "name": "loadlab",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Local-first load testing for developers",
+  "author": "Darshan A S <asdarshan10@gmail.com>",
   "main": "out/main/index.js",
   "private": true,
   "scripts": {
@@ -62,12 +63,15 @@
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "icon": "build/icons/png"
+      "icon": "build/icons/png",
+      "category": "Development",
+      "maintainer": "Darshan A S <asdarshan10@gmail.com>"
     },
     "publish": {
       "provider": "github",
       "owner": "Darshan-A-S",
-      "repo": "LoadLab"
+      "repo": "LoadLab",
+      "releaseType": "release"
     }
   }
 }
