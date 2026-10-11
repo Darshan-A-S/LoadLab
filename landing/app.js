@@ -9,8 +9,8 @@
   // Configuration
   const GITHUB_REPO = 'Darshan-A-S/LoadLab';
   const GITHUB_API_RELEASES = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
-  const WINDOWS_EXE_URL = `https://github.com/${GITHUB_REPO}/releases/download/v0.1.3/LoadLab.Setup.0.1.3.exe`;
   const RELEASES_PAGE_URL = `https://github.com/${GITHUB_REPO}/releases`;
+  let currentVersion = '0.1.4';
   
   // 100% Strictly Real Downloads directly from GitHub Releases API (Zero artificial baseline)
   const BASE_OFFLINE_DOWNLOADS = 0;
@@ -114,16 +114,26 @@
             }
           });
 
-          // Automatically sync download buttons with latest release asset links
+          // Automatically sync download buttons and version with latest release
           const latestRelease = releases[0];
-          if (latestRelease && Array.isArray(latestRelease.assets)) {
-            const winAsset = latestRelease.assets.find(a => a.name.endsWith('.exe'));
-            const macAsset = latestRelease.assets.find(a => a.name.endsWith('.dmg'));
-            const linuxAsset = latestRelease.assets.find(a => a.name.endsWith('.AppImage'));
+          if (latestRelease) {
+            if (latestRelease.tag_name) {
+              currentVersion = latestRelease.tag_name.replace(/^v/, '');
+              const versionTagEl = document.querySelector('.version-tag');
+              if (versionTagEl) {
+                versionTagEl.innerHTML = `<span class="pulse-dot"></span> ${latestRelease.tag_name}`;
+              }
+            }
 
-            if (winAsset && btnDownloadWin) btnDownloadWin.href = winAsset.browser_download_url;
-            if (macAsset && btnDownloadMac) btnDownloadMac.href = macAsset.browser_download_url;
-            if (linuxAsset && btnDownloadLinux) btnDownloadLinux.href = linuxAsset.browser_download_url;
+            if (Array.isArray(latestRelease.assets)) {
+              const winAsset = latestRelease.assets.find(a => a.name.endsWith('.exe'));
+              const macAsset = latestRelease.assets.find(a => a.name.endsWith('.dmg'));
+              const linuxAsset = latestRelease.assets.find(a => a.name.endsWith('.AppImage'));
+
+              if (winAsset && btnDownloadWin) btnDownloadWin.href = winAsset.browser_download_url;
+              if (macAsset && btnDownloadMac) btnDownloadMac.href = macAsset.browser_download_url;
+              if (linuxAsset && btnDownloadLinux) btnDownloadLinux.href = linuxAsset.browser_download_url;
+            }
           }
 
           fetchSuccessful = true;
@@ -174,8 +184,8 @@
      3. DOWNLOAD BUTTON ACTIONS & MODAL HANDLERS
      ------------------------------------------------------------------ */
   btnDownloadWin.addEventListener('click', function (e) {
-    showToast('Downloading LoadLab for Windows (v0.1.3)...');
-    // Allow natural download link to proceed to LoadLab.Setup.0.1.3.exe
+    showToast(`Downloading LoadLab for Windows (v${currentVersion})...`);
+    // Allow natural download link to proceed
   });
 
   btnDownloadMac.addEventListener('click', function (e) {
@@ -197,7 +207,7 @@
       'Download LoadLab for Linux',
       `<p>LoadLab for Linux is available as an <strong>AppImage</strong> and <strong>.deb</strong> package for Debian / Ubuntu / Fedora / Arch distributions.</p>
        <div style="margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-family: monospace; font-size: 0.8rem;">
-         chmod +x LoadLab-0.1.3.AppImage<br>./LoadLab-0.1.3.AppImage
+         chmod +x LoadLab-${currentVersion}.AppImage<br>./LoadLab-${currentVersion}.AppImage
        </div>
        <p style="margin-top: 12px; font-size: 0.8rem; color: #94a3b8;">Click below to download the latest Linux binaries from GitHub Releases.</p>`,
       RELEASES_PAGE_URL
